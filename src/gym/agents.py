@@ -64,4 +64,4 @@ class Arial():
 
     def set_position(self, position):
         p.resetBasePositionAndOrientation(self.pybullet_id, position,
-                                          [0, 0, 0])
+                                          self.init_orientation)

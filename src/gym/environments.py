@@ -1,8 +1,15 @@
 import math
+import numpy as np
 
 import pybullet as p
 import pybullet_data
 from .agents import Ground, Arial
+
+
+def get_position(agent):
+    grid = np.arange(25).reshape(5, 5)
+    pos_xy = np.where(grid == agent)
+    return pos_xy
 
 
 class Environment():
@@ -28,18 +35,21 @@ class Environment():
         p.loadURDF("plane.urdf", [0, 0, 0],
                    plane_orientation,
                    useFixedBase=True)
-        p.loadURDF("src/gym/urdf/environment.urdf", [-5, 0, 0],
-                   init_orientation,
-                   useFixedBase=True)
+        p.loadURDF("src/gym/urdf/env.urdf", [10, 0, 0],
+                   plane_orientation,
+                   useFixedBase=True,
+                   flags=p.URDF_INITIALIZE_SAT_FEATURES)
         for i, item in enumerate(range(n_ground)):
-            position = [i + 2, item, 0.1]
+            position = get_position(item)
+            init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25, 2]
             self.ground_vehicles.append(
-                Ground(position, init_orientation, i, 1 / 10))
+                Ground(init_pos, init_orientation, i, 1 / 10))
 
         for i, item in enumerate(range(n_arial)):
-            position = [i + 2.5, item, 0.1]
+            position = get_position(item)
+            init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25 - 1.5, 2]
             self.arial_vehicles.append(
-                Arial(position, init_orientation, i, 1 / 10))
+                Arial(init_pos, init_orientation, i, 1 / 10))
 
     def get_camera_image(self):
         roll = 0
@@ -79,13 +89,20 @@ class Environment():
         p.stepSimulation()
 
     def take_action(self):
+        # Take random action as of now
+        rand_step_x = np.random.rand(1)
+        rand_step_y = np.random.rand(1)
         for vehicle in self.ground_vehicles:
-            position = 0  # from external file
-            vehicle.set_position(position)
+            current_pos, _ = vehicle.get_pos_and_orientation()
+            current_pos[0] = vehicle.init_pos[0] + rand_step_x * 2 - 4.5
+            current_pos[1] = vehicle.init_pos[1] + rand_step_y * 2 - 2.5
+            current_pos[2] = 1
+            vehicle.set_position(current_pos)
 
         for vehicle in self.arial_vehicles:
-            position = 0  # from external file
-            vehicle.set_position(position)
+            current_pos, _ = vehicle.get_pos_and_orientation()
+            current_pos
+            vehicle.set_position(current_pos)
         p.stepSimulation()
 
     def calculate_reward(self, vehicle):
