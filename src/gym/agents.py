@@ -30,6 +30,13 @@ class Ground():
         return np.array(pos), euler[2]
 
     def set_position(self, position):
+        """This function moves the vehicles to given position
+
+        Parameters
+        ----------
+        position : array
+            The position to which the vehicle should be moved.
+        """
         p.resetBasePositionAndOrientation(self.pybullet_id, position,
                                           self.init_orientation)
 
@@ -55,13 +62,19 @@ class Arial():
                                           (0., 0., 0., 1.))
 
     def get_pos_and_orientation(self):
-        """
-        Returns the position and orientation (as Yaw angle) of the robot.
+        """Returns the position and orientation (as Yaw angle) of the robot.
         """
         pos, rot = p.getBasePositionAndOrientation(self.pybullet_id)
         euler = p.getEulerFromQuaternion(rot)
         return np.array(pos), euler[2]
 
     def set_position(self, position):
+        """This function moves the vehicles to given position
+
+        Parameters
+        ----------
+        position : array
+            The position to which the vehicle should be moved.
+        """
         p.resetBasePositionAndOrientation(self.pybullet_id, position,
                                           self.init_orientation)

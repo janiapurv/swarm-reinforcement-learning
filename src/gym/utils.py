@@ -5,6 +5,20 @@ import pandas as pd
 
 
 def haversine_dist(init_point, final_point):
+    """Gives the Haversine distance between the initial and final point
+
+    Parameters
+    ----------
+    init_point : array
+        The initial point
+    final_point : array
+        The final point
+
+    Returns
+    -------
+    float
+        The Haversine distance
+    """
 
     # Assuming the input is in degrees
     init_rad = init_point * math.pi / 180
@@ -23,6 +37,8 @@ def haversine_dist(init_point, final_point):
 
 
 def get_xy_position():
+    """Get the x and y position of all the buildings
+    """
     data = np.genfromtxt('src/gym/latitude_longitude.csv',
                          delimiter=',',
                          skip_header=True)
@@ -38,10 +54,8 @@ def get_xy_position():
         temp_y[1] = init_point[1]
         xy_pos[i, 1] = haversine_dist(init_point, temp_y)
 
-    print(xy_pos)
     df = pd.DataFrame(xy_pos)
     filepath = 'src/gym/co_ordinates.xlsx'
     df.to_excel(filepath, index=False)
 
-
-get_xy_position()
+    return None
