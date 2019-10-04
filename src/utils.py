@@ -1,24 +1,5 @@
+import sys
 from contextlib import contextmanager
-
-
-class skip(object):
-    """A decorator to skip function execution.
-
-    Parameters
-    ----------
-    f : function
-        Any function whose execution need to be skipped.
-
-    Attributes
-    ----------
-    f
-
-    """
-    def __init__(self, f):
-        self.f = f
-
-    def __call__(self, *args):
-        print('skipping : ' + self.f.__name__)
 
 
 class SkipWith(Exception):
@@ -42,14 +23,31 @@ def skip_run(flag, f):
     @contextmanager
     def check_active():
         deactivated = ['skip']
+        p = ColorPrint()  # printing options
         if flag in deactivated:
-            print('Skipping the block: ' + f)
+            p.print_skip('{:>12}  {:>2}  {:>12}'.format(
+                'Skipping the block', '|', f))
             raise SkipWith()
         else:
-            print('Running the block: ' + f)
+            p.print_run('{:>12}  {:>3}  {:>12}'.format('Running the block',
+                                                       '|', f))
             yield
 
     try:
         yield check_active
     except SkipWith:
         pass
+
+
+class ColorPrint:
+    @staticmethod
+    def print_skip(message, end='\n'):
+        sys.stderr.write('\x1b[88m' + message.strip() + '\x1b[0m' + end)
+
+    @staticmethod
+    def print_run(message, end='\n'):
+        sys.stdout.write('\x1b[1;32m' + message.strip() + '\x1b[0m' + end)
+
+    @staticmethod
+    def print_warn(message, end='\n'):
+        sys.stderr.write('\x1b[1;33m' + message.strip() + '\x1b[0m' + end)

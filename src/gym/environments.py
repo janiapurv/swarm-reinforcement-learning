@@ -61,15 +61,15 @@ class Environment():
             Three arrays corresponding to rgb, depth, and segmentation image.
         """
         upAxisIndex = 2
-        camDistance = 2
-        pixelWidth = 700
-        pixelHeight = 350
+        camDistance = 20
+        pixelWidth = 700 * 10
+        pixelHeight = 350 * 10
         camTargetPos = [0, 0, 0]
 
         far = camDistance
         near = -far
         view_matrix = p.computeViewMatrixFromYawPitchRoll(
-            camTargetPos, camDistance, 0, -90, 0, upAxisIndex)
+            camTargetPos, camDistance, 0, 90, 0, upAxisIndex)
         projection_matrix = p.computeProjectionMatrix(20, -15, -8.75, 8.75,
                                                       near, far)
         # Get depth values using the OpenGL renderer

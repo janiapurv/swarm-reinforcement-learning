@@ -1,3 +1,4 @@
 ##---------------------------------------------------------------------##
 # Path
+map_data_path: 'data/processed/map_data/'
 map_save_path: 'data/processed/map_data/'

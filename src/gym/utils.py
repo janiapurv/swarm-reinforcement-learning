@@ -36,12 +36,11 @@ def haversine_dist(init_point, final_point):
     return 6356.752e3 * c
 
 
-def get_xy_position():
+def get_xy_position(config):
     """Get the x and y position of all the buildings
     """
-    data = np.genfromtxt('src/gym/latitude_longitude.csv',
-                         delimiter=',',
-                         skip_header=True)
+    read_path = config['map_data_path'] + 'latitude_longitude.csv'
+    data = np.genfromtxt(read_path, delimiter=',', skip_header=True)
 
     init_point = data[0]
     xy_pos = np.zeros(data.shape)
@@ -54,8 +53,8 @@ def get_xy_position():
         temp_y[1] = init_point[1]
         xy_pos[i, 1] = haversine_dist(init_point, temp_y)
 
-    df = pd.DataFrame(xy_pos)
-    filepath = 'src/gym/co_ordinates.xlsx'
+    df = pd.DataFrame(xy_pos, columns=['x', 'y'])
+    filepath = config['map_save_path'] + 'co_ordinates.xlsx'
     df.to_excel(filepath, index=False)
 
     return None

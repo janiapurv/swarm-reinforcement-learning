@@ -1,8 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 
-def plot_occupancy_map(image, config, save_array=False):
+def plot_occupancy_map(ax, image, config, save_array=False):
     """Save the occupancy map for the given image
 
     Parameters
@@ -14,12 +13,7 @@ def plot_occupancy_map(image, config, save_array=False):
     -------
     None
     """
-    fig = plt.figure(frameon=False)
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
-    ax.set_axis_off()
-    fig.add_axes(ax)
-    ax.imshow(np.flip(image, axis=0))
-    plt.show()
+    ax.imshow(np.flip(image, axis=0), origin='lower')
 
     # Save the map
     if save_array:
