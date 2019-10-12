@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def haversine_dist(init_point, final_point):
@@ -26,14 +27,10 @@ def haversine_dist(init_point, final_point):
 
     d_latitude = final_rad[0] - init_rad[0]
     d_longitude = final_rad[1] - init_rad[1]
+    x = (d_longitude) * math.cos((final_rad[0] - init_rad[0]) / 2)
+    y = d_latitude
 
-    a = math.sin(d_latitude / 2)**2 + math.cos(init_rad[0]) * math.cos(
-        final_rad[0]) * math.sin(d_longitude / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    if d_longitude < 0:
-        c = c * (-1)
-
-    return 6356.752e3 * c
+    return [x * 6356.752e3, y * 6356.752e3]
 
 
 def get_xy_position(config):
@@ -43,16 +40,19 @@ def get_xy_position(config):
     data = np.genfromtxt(read_path, delimiter=',', skip_header=True)
 
     init_point = data[0]
-    xy_pos = np.zeros(data.shape)
+    xy_pos = np.ones((data.shape[0], 3))
     for i, item in enumerate(data):
         temp_x = item.copy()
-        temp_x[0] = init_point[0]
-        xy_pos[i, 0] = haversine_dist(init_point, temp_x)
+        xy_pos[i, 0:2] = haversine_dist(init_point, temp_x)
 
-        temp_y = item.copy()
-        temp_y[1] = init_point[1]
-        xy_pos[i, 1] = haversine_dist(init_point, temp_y)
+    # Rotation angle
+    t = math.pi / 2 + math.atan2(114.2746 - 184.137, -67.67721 + 82.2549)
+    rot = np.asarray([[math.cos(t), -math.sin(t), 0],
+                      [math.sin(t), math.cos(t), 0], [0, 0, 1]])
+    xy_pos = np.matmul(xy_pos, rot)
 
+    plt.scatter(xy_pos[:, 0], xy_pos[:, 1])
+    plt.show()
     df = pd.DataFrame(xy_pos, columns=['x', 'y'])
     filepath = config['map_save_path'] + 'co_ordinates.xlsx'
     df.to_excel(filepath, index=False)

@@ -1,25 +1,44 @@
+from pathlib import Path
+
 import numpy as np
 import pybullet as p
 
 
-class Ground():
+class UGV():
     """The class is the interface to a single robot
     """
-    def __init__(self, init_pos, init_orientation, robot_id, dt):
+    def __init__(self, init_pos, init_orientation, robot_id, dt, config):
+        # Properties UGV
         self.id = robot_id
         self.init_pos = init_pos
+        self.current_pos = init_pos
+        self.updated_pos = init_pos
         self.init_orientation = init_orientation
-        self.dt = dt
-        self.velocity = np.array([0, 0, 2])
-        self.pybullet_id = p.loadURDF("src/gym/urdf/ground_vehicle.urdf",
-                                      self.init_pos, self.init_orientation)
+        self.idle = True
+        self.ammo = 100
+        self.functional = True
+        self.speed = config['ugv']['speed']
+        self.search_speed = config['ugv']['search_speed']
+        self.type = 'ugv'
+
+        # Simulation parameters
+        self.reward = 0
+
+        self._initial_setup()
         self.reset()
+
+    def _initial_setup(self):
+        path = Path(__file__).parents[0] / 'urdf/ground_vehicle.urdf'
+        self.pybullet_id = p.loadURDF(str(path), self.init_pos,
+                                      self.init_orientation)
+        return None
 
     def reset(self):
         """Moves the robot back to its initial position
         """
         p.resetBasePositionAndOrientation(self.pybullet_id, self.init_pos,
                                           self.init_orientation)
+        return None
 
     def get_pos_and_orientation(self):
         """
@@ -39,27 +58,46 @@ class Ground():
         """
         p.resetBasePositionAndOrientation(self.pybullet_id, position,
                                           self.init_orientation)
+        pos, _ = self.get_pos_and_orientation()
+        self.current_pos = pos
+        return None
 
 
-class Arial():
+class UAV():
     """The class is the interface to a single robot
     """
-    def __init__(self, init_pos, init_orientation, robot_id, dt):
+    def __init__(self, init_pos, init_orientation, robot_id, dt, config):
+        # Properties UGV
         self.id = robot_id
         self.init_pos = init_pos
+        self.current_pos = init_pos
+        self.updated_pos = init_pos
         self.init_orientation = init_orientation
-        self.dt = dt
-        self.velocity = np.array([0, 0, 2])
-        self.pybullet_id = p.loadURDF("src/gym/urdf/arial_vehicle.urdf",
-                                      self.init_pos, self.init_orientation)
-        self.joint_ids = list(range(p.getNumJoints(self.pybullet_id)))
+        self.idle = True
+        self.battery = 100
+        self.functional = True
+        self.speed = config['uav']['speed']
+        self.search_speed = config['uav']['search_speed']
+        self.type = 'uav'
+
+        # Simulation parameters
+        self.reward = 0
+
+        self._initial_setup()
         self.reset()
+
+    def _initial_setup(self):
+        path = Path(__file__).parents[0] / 'urdf/arial_vehicle.urdf'
+        self.pybullet_id = p.loadURDF(str(path), self.init_pos,
+                                      self.init_orientation)
+        return None
 
     def reset(self):
         """Moves the robot back to its initial position
         """
         p.resetBasePositionAndOrientation(self.pybullet_id, self.init_pos,
                                           (0., 0., 0., 1.))
+        return None
 
     def get_pos_and_orientation(self):
         """Returns the position and orientation (as Yaw angle) of the robot.
@@ -78,3 +116,6 @@ class Arial():
         """
         p.resetBasePositionAndOrientation(self.pybullet_id, position,
                                           self.init_orientation)
+        pos, _ = self.get_pos_and_orientation()
+        self.current_pos = pos
+        return None
