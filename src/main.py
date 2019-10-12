@@ -42,7 +42,7 @@ with skip_run('run', 'learning tactic') as check, check():
     for j in range(10):
         start = time.time()
         for i in range(6):
-            net_output[i] = np.random.rand(1, 7).tolist()[0]
-        print(j)
+            net_output[i] = np.random.rand(1, 6).tolist()[0]
+        # print(j)
         env.step(net_output)
-        print(time.time() - start)
+        # print(time.time() - start)

@@ -32,17 +32,6 @@ class ActionManager(StateManager):
 
         return None
 
-    def get_non_idles_vehicles(self, vehicles):
-        """Returns non idle vehicles
-
-        Parameters
-        ----------
-        vehicles : list
-            A list of UAV or UGV vehilces class
-        """
-        vehicles = list(filter(lambda vehicle: vehicle.idle, vehicles))
-        return vehicles
-
     def get_robot_group_info(self, vehicles, decoded_actions):
         """Calculates the robot and group info needed for task allocation
 
@@ -57,12 +46,9 @@ class ActionManager(StateManager):
         -------
         robotInfo, groupInfo, targetInfo
         """
-        # Get non idle vehicles
-        non_idle_vehicle = self.get_non_idles_vehicles(vehicles)
-
         # Get the non idle vehicle info and update it
-        robotInfo = np.zeros((len(non_idle_vehicle), 3))
-        for i, vehicle in enumerate(non_idle_vehicle):
+        robotInfo = np.zeros((len(vehicles), 3))
+        for i, vehicle in enumerate(vehicles):
             robotInfo[i, 0:2] = vehicle.current_pos[0:2]
             if vehicle.type == 'uav':
                 robotInfo[i, 2] = vehicle.battery
@@ -75,7 +61,7 @@ class ActionManager(StateManager):
         for i, actions in enumerate(decoded_actions):
             info = self.node_info(actions[1])
             groupInfo[i, 0:2] = info['position']
-            groupInfo[i, 2] = mt.floor(actions[0] * len(non_idle_vehicle))
+            groupInfo[i, 2] = mt.floor(actions[0])
             groupInfo[i, 3] = groupInfo[i, 3] * 0 + 1
             groupInfo[i, 4] = groupInfo[i, 4] * 0
             groupInfo[i, 5] = groupInfo[i, 5] * 0 + 600
@@ -136,7 +122,7 @@ class ActionManager(StateManager):
         self.perform_task_allocation(decoded_actions_uav, decoded_actions_ugv)
 
         # Execute them
-        for i in range(10):
+        for i in range(1000):
             # Update the time
             self.current_time = self.current_time + self.config['simulation'][
                 'time_step']
@@ -175,6 +161,7 @@ class PrimitiveManager(StateManager):
         # Update vehicles
         self.vehicle_id = vehicles_id
         self.primitive_executing = primitive_id
+        self.formation_type = 'solid'
         self.vehicles = [self.uav[j] for j in vehicles_id]
         self.n_vehicles = len(self.vehicles)
 
@@ -191,11 +178,10 @@ class PrimitiveManager(StateManager):
         """Perform primitive execution
         """
         primitives = [
-            self.planning_primitive(),
-            self.formation_primitive(),
-            self.mapping_primitive()
+            self.planning_primitive, self.formation_primitive,
+            self.mapping_primitive
         ]
-        primitives[self.primitive_executing]
+        primitives[self.primitive_executing]()
 
         return None
 
@@ -205,7 +191,8 @@ class PrimitiveManager(StateManager):
         if self.n_vehicles > 1:  # Cannot do formation with one vehicle
             dt = 0.1
             self.vehicles = self.formation.execute(self.vehicles,
-                                                   self.centroid_pos, dt)
+                                                   self.centroid_pos, dt,
+                                                   self.formation_type)
             for vehicle in self.vehicles:
                 vehicle.set_position(vehicle.updated_pos)
         return None
@@ -216,7 +203,8 @@ class PrimitiveManager(StateManager):
         if self.n_vehicles > 1:  # Cannot do formation with one vehicle
             dt = 0.1
             self.vehicles = self.formation.execute(self.vehicles,
-                                                   self.centroid_pos, dt)
+                                                   self.centroid_pos, dt,
+                                                   self.formation_type)
             for vehicle in self.vehicles:
                 vehicle.set_position(vehicle.updated_pos)
         return None
@@ -227,7 +215,8 @@ class PrimitiveManager(StateManager):
         if self.n_vehicles > 1:  # Cannot do formation with one vehicle
             dt = 0.1
             self.vehicles = self.formation.execute(self.vehicles,
-                                                   self.centroid_pos, dt)
+                                                   self.centroid_pos, dt,
+                                                   self.formation_type)
             for vehicle in self.vehicles:
                 vehicle.set_position(vehicle.updated_pos)
         return None

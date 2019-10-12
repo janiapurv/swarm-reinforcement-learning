@@ -67,10 +67,15 @@ class StateManager():
             info['progress_goals'] = 0
             info['probability_goals_indoor'] = 1 / n_targets
             info['defence_perimeter'] = 0
-            info['n_defence_perimeter'] = 0
             info['progress_goals_indoor'] = 0
             node_info = self.node_info(target)  # Get the position
             info['position'] = node_info['position']
+            building_info = self.building_info(target)
+            info['n_defence_perimeter'] = building_info['perimeter'] / (
+                self.config['ugv']['defense_radius'] * 2)
+            info['perimeter'] = building_info['perimeter']
+            info['area'] = building_info['area']
+            info['n_floors'] = building_info['floors']
             self.target.append(info)
 
     def target_info(self, id):
@@ -129,11 +134,9 @@ class StateManager():
 
     def check_vehicle(self, vehicle):
         if (not vehicle.idle) and vehicle.type == 'uav':
-            if vehicle.primitive_executing == 1:
-                return 'uav'
+            return 'uav'
         elif (not vehicle.idle) and vehicle.type == 'ugv':
-            if vehicle.primitive_executing == 1:
-                return 'ugv'
+            return 'ugv'
         else:
             return None
 
@@ -151,15 +154,16 @@ class StateManager():
     def outdoor_progress(self, vehicle, target):
         req_progress = target['n_floor'] * target['perimeter']
         progesse_rate = vehicle.search_speed / req_progress
-        progress_goals = (self.current_time -
-                          vehicle.time_reached_target) * progesse_rate
+        progress_goals = self.config['simulation']['time_step'] * progesse_rate
         return progress_goals
 
     def indoor_progress(self, vehicle, target):
-        # Need to implement
-        return None
+        req_progress = target['n_floor'] * target['area']
+        progesse_rate = vehicle.search_speed / req_progress
+        progress_goals = self.config['simulation']['time_step'] * progesse_rate
+        return progress_goals
 
-    def outdoor_target_progress(self, vehicles):
+    def outdoor_target_progress_update(self, vehicles):  # noqa
         for target in self.target:
             progress_goals = 0
             for vehicle in vehicles:
@@ -167,15 +171,93 @@ class StateManager():
                     if self.check_closeness(vehicle, target):
                         progress_goals += self.outdoor_progress(
                             vehicle, target)
-                else:
-                    if self.check_closeness(vehicle, target):
-                        progress_goals += self.indoor_progress(vehicle, target)
             if progress_goals > 1:
                 progress_goals = 1
-            target['progress_goals'] = progress_goals
+            target[
+                'progress_goals'] = target['progress_goals'] + progress_goals
+
+        sum_progress = 0
+        found_goal = 0
+        for j, target in enumerate(self.target):
+            if target['target_id'] == self.config['simulation'][
+                    'goal_node']:  # found the goal
+                if target['progress_goals'] >= np.random.rand():
+                    # if it finds it in out of building indoor search
+                    # target is guaranteed
+                    for i in len(self.target):
+                        if i == j:
+                            self.target[i]['probability_goals'] = 1
+                            self.target[i]['probability_goals_indoor'] = 1
+                            self.target[i]['probability_goals_outdoor'] = 1
+                        else:
+                            self.target[i]['probability_goals'] = 0
+                            self.target[i]['probability_goals_indoor'] = 0
+                            self.target[i]['probability_goals_outdoor'] = 0
+                    found_goal = 1
+                    break
+            sum_progress += self.target[j]['progress_goals']
+
+        if found_goal == 0:
+            for target in self.target:
+                target['probability_goals_outdoor'] = (
+                    1 - target['progress_goals']) / (
+                        len(self.target) - sum_progress
+                    )  # 1- progress is probability of each of them
+                target['probability_goals'] = (
+                    target['probability_goals_outdoor'] +
+                    target['probability_goals_indoor']) / 2
+        return None
+
+    def indoor_target_progress_update(self, vehicles):  # noqa
+        for target in self.target:
+            progress_goals = 0
+            vehicle_count = 0
+
+            for vehicle in vehicles:
+                if self.check_vehicle(vehicle) == 'ugv':
+                    if self.check_closeness(vehicle, target):
+                        vehicle_count += 1
+                        if target['n_defence_perimeter'] < vehicle_count:
+                            progress_goals += self.indoor_progress(
+                                vehicle, target)
+            if progress_goals > 1:
+                progress_goals = 1
+            target[
+                'progress_goals'] = target['progress_goals'] + progress_goals
+
+        sum_progress = 0
+        found_goal = 0
+        for j, target in enumerate(self.target):
+            if target['target_id'] == self.config['simulation'][
+                    'goal_node']:  # found the goal
+                if target['progress_goals'] >= np.random.rand():
+                    # if it finds it in out of building indoor search
+                    # target is guaranteed
+                    for i in len(self.target):
+                        if i == j:
+                            self.target[i]['probability_goals'] = 1
+                            self.target[i]['probability_goals_indoor'] = 1
+                            self.target[i]['probability_goals_outdoor'] = 1
+                        else:
+                            self.target[i]['probability_goals'] = 0
+                            self.target[i]['probability_goals_indoor'] = 0
+                            self.target[i]['probability_goals_outdoor'] = 0
+                    found_goal = 1
+                    break
+            sum_progress += self.target[j]['progress_goals']
+
+        if found_goal == 0:
+            for target in self.target:
+                target['probability_goals_outdoor'] = (
+                    1 - target['progress_goals']) / (
+                        len(self.target) - sum_progress
+                    )  # 1- progress is probability of each of them
+
+        return None
 
     def update_progress(self):
-        # Parameters
-        # need to implemenet
-
+        """Update all the probability
+        """
+        self.indoor_target_progress_update(self.ugv)
+        self.outdoor_target_progress_update(self.uavs)
         return None

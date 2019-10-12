@@ -8,7 +8,7 @@ class FormationControl():
         return None
 
     def get_vel(self, j, curr_pos, min_dis, centroid_pos, alpha, gamma,
-                path_vel, vel_max, a, b, knn):
+                path_vel, vel_max, a, b, knn, formation_type):
         # Implementing pij which care of peers
         peers = curr_pos.copy()
         curr_loc = curr_pos[j, :]
@@ -47,10 +47,37 @@ class FormationControl():
         f_g_ij = (((curr_loc[0] - centroid_pos[0])**2) / a**2) + ((
             (curr_loc[1] - centroid_pos[1])**2) / b**2) - 1
 
-        del_f_g_ij = -2 * (-curr_loc + centroid_pos)
-        del_zeta_ij = kl * max(0, f_g_ij) * del_f_g_ij
+        if formation_type == 'ring':
+            a_inner = a - 0.1 * a
+            a_outer = a + 0.1 * a
+            b_inner = b - 0.1 * b
+            b_outer = b + 0.1 * b
 
-        vel = path_vel - (alpha * del_zeta_ij) - (gamma * P_ij)
+            f_g_ij_RING_outer = ((
+                (curr_loc[0] - centroid_pos[0])**2) / a_outer**2) + ((
+                    (curr_loc[1] - centroid_pos[1])**2) / b_outer**2) - 1
+            f_g_ij_RING_inner = 1 - ((
+                (curr_loc[0] - centroid_pos[0])**2) / a_inner**2) + ((
+                    (curr_loc[1] - centroid_pos[1])**2) / b_inner**2)
+
+            f_g_ij = 0.5 * (f_g_ij_RING_outer + f_g_ij_RING_inner)
+
+            del_f_g_ij = -2 * (-curr_loc + centroid_pos)
+            del_zeta_ij = kl * max(0, f_g_ij)
+        else:
+            f_g_ij = (((curr_loc[0] - centroid_pos[0])**2) / a**2) + ((
+                (curr_loc[1] - centroid_pos[1])**2) / b**2) - 1
+
+            del_f_g_ij = -2 * (-curr_loc + centroid_pos)
+            del_zeta_ij = kl * max(0, f_g_ij) * del_f_g_ij
+
+        print(np.linalg.norm((alpha * del_zeta_ij) - (gamma * P_ij)))
+        if np.linalg.norm((alpha * del_zeta_ij) -
+                          (gamma * P_ij)) < 0.05 * vel_max:
+
+            vel = path_vel - 0 * (alpha * del_zeta_ij) - (gamma * P_ij)
+        else:
+            vel = path_vel - (alpha * del_zeta_ij) - (gamma * P_ij)
 
         if vel_max is not None:
             vel[0] = self.getFeasibleSpeed(vel[0], vel_max)
@@ -72,9 +99,10 @@ class FormationControl():
             vel = min(vel_max, vel)
         else:
             vel = max(-vel_max, vel)
+
         return vel
 
-    def execute(self, vehicles, centroid_pos, dt):
+    def execute(self, vehicles, centroid_pos, dt, formation_type):
         """Get the position of the formation control
 
         Parameters
@@ -89,13 +117,13 @@ class FormationControl():
 
         # Parameters
         vel_max = 100
-        a = 5
-        b = 5
+        a = 10
+        b = 10
         knn = 6
         vmax = 2
         alpha = 2
-        gamma = 2.5
-        min_dis = 3
+        gamma = 0.5
+        min_dis = 1
 
         all_drones_pose = np.zeros((len(vehicles), 3))
         pose_new = np.zeros((len(vehicles), 3))
@@ -110,7 +138,8 @@ class FormationControl():
             curr_pos = all_drones_pose[:, 0:2]
 
             vel = self.get_vel(j, curr_pos, min_dis, centroid_pos, alpha,
-                               gamma, path_vel, vel_max, a, b, knn)
+                               gamma, path_vel, vel_max, a, b, knn,
+                               formation_type)
             dst = np.linalg.norm(vel)
             if dst > vmax:
                 vel = (vmax / dst) * vel

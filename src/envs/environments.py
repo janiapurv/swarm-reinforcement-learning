@@ -50,7 +50,7 @@ class Environment():
         self.state_manager = StateManager(self.uav, self.ugv,
                                           self.current_time, self.config)
         self.state = State(self.state_manager)
-        self.action = Action(self.config)
+        self.action = Action(self.state_manager)
         self.action_manager = ActionManager(self.state_manager)
 
     def _initial_setup(self):
