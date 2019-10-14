@@ -2,16 +2,13 @@ import numpy as np
 import networkx as nx
 
 
-class MRTA():
-    # Author: Payam Ghassemi, payamgha@buffalo.edu
-    # Sep 9, 2019
-    # Copyright 2019 Payam Ghassemi
+class MRTA(object):
     """
     A class to handle Multi-robot Task Allocations.
 
     .. todo:: Optimize/learn weight function.
     """
-    def __init__(self, vel=2, safeBattery=0.0):
+    def __init__(self, maxiter=None, fixedprec=1e9):
         """Constructor of the class, initilize robots' parameters.
 
         Parameters
@@ -22,11 +19,11 @@ class MRTA():
             Min. battery to land (it is only set non-zero for UAVs)
             by default 0
         """
-        self.safeBattery = safeBattery
-        self.vel = vel
-        self.insSep = 'i'
 
-    def allocateRobots(self, robotInfo, groupInfo):  # noqa: C901
+        self.maxiter = maxiter
+        self.fixedprec = fixedprec
+
+    def allocateRobots(self, robotInfo, groupInfo):
         """Allocate robots to given groups.
 
         Parameters
@@ -54,104 +51,88 @@ class MRTA():
         >>> robotGroupAlloc = mrta.allocateRobots(robotInfo, groupInfo)
         """
 
+        maxiter = self.maxiter
+        fixedprec = self.fixedprec
+
         nRobot = np.shape(robotInfo)[0]
         nGroup = np.shape(groupInfo)[0]
-        robotNodes = np.arange(nRobot) + 1
-        groupNodes = []
+        data = np.array(robotInfo[:, :2])
 
-        insSep = self.insSep
-        for iGroup in range(nGroup):
-            nInstance = int(groupInfo[iGroup, 2])
-            for j in range(nInstance):
-                groupNodes.append('g' + str(iGroup + 1) + insSep + str(j + 1))
+        min_ = np.min(data, axis=0)
+        max_ = np.max(data, axis=0)
+        nRobotWanted = sum(groupInfo[:, 2])
 
-        B = nx.Graph()
-        B.add_nodes_from(robotNodes, bipartite=0)
-        B.add_nodes_from(groupNodes, bipartite=1)
+        demand = [nRobot - nRobotWanted]
+        for i in range(nGroup):
+            demand.append(groupInfo[i, 2])
+        # print(demand)
 
-        safeBattery = self.safeBattery
-        vel = self.vel
-        nGroupNodes = len(groupNodes)
+        C = min_ + np.random.random(
+            (len(demand), data.shape[1])) * (max_ - min_)
+        M = np.array([-1] * len(data), dtype=np.int)
 
-        for iRobot in range(nRobot):
-            robotBattery = robotInfo[iRobot, 2]
-            if (robotBattery >= safeBattery):
-                for iGroupNode in range(nGroupNodes):
-                    groupNode = groupNodes[iGroupNode]
-                    iGroup = self.getGroupId(groupNode) - 1
-                    dist = np.linalg.norm(robotInfo[iRobot, :2] -
-                                          groupInfo[iGroup, :2])
-                    # p = groupInfo[iGroup, 3]
-                    timeDeadline = groupInfo[iGroup, 5]
-                    timeArrival = dist / vel
-                    if (timeArrival <= timeDeadline):
-                        weight = self.getWeight(robotInfo[iRobot, :],
-                                                groupInfo[iGroup, :])
-                        B.add_edge(robotNodes[iRobot],
-                                   groupNode,
-                                   weight=weight)
+        itercnt = 0
+        while True:
+            itercnt += 1
 
-        robotGroup = np.zeros((nRobot, ))
-        sol = nx.max_weight_matching(B, maxcardinality=True)
+            # memberships
+            g = nx.DiGraph()
+            g.add_nodes_from(range(0, data.shape[0]), demand=-1)  # points
+            for i in range(0, len(C)):
+                g.add_node(len(data) + i, demand=demand[i])
 
-        for iGroupNode in range(nGroupNodes):
-            groupNode = groupNodes[iGroupNode]
-            if B.degree(groupNode) > 0:
-                # print("sol: " + str(sol))
-                for x, y in sol:
-                    if x == groupNode:
-                        dummySol = y
-                        break
-                    elif y == groupNode:
-                        dummySol = x
-                        break
-                if dummySol > 0:
-                    groupId = self.getGroupId(groupNode)
-                    robotGroup[dummySol - 1] = groupId
-        # ADDED
-        return robotGroup.astype(int).tolist()
+            # Calculating cost...
+            cost = np.array([
+                np.linalg.norm(np.tile(data.T, len(C)).T - np.tile(
+                    C, len(data)).reshape(len(C) * len(data), C.shape[1]),
+                               axis=1)
+            ])
+            # Preparing data_to_C_edges...
+            data_to_C_edges = np.concatenate(
+                (np.tile([range(0, data.shape[0])], len(C)).T,
+                 np.tile(
+                     np.array([
+                         range(data.shape[0], data.shape[0] + C.shape[0])
+                     ]).T, len(data)).reshape(len(C) * len(data),
+                                              1), cost.T * fixedprec),
+                axis=1).astype(np.uint64)
+            # Adding to graph
+            g.add_weighted_edges_from(data_to_C_edges)
 
-    def getWeight(self, robotInfo, groupInfo):
-        """Retrieve group-id from group-nodes.
+            a = len(data) + len(C)
+            g.add_node(a, demand=len(data) - np.sum(demand))
+            C_to_a_edges = np.concatenate((np.array(
+                [range(len(data),
+                       len(data) + len(C))]).T, np.tile([[a]], len(C)).T),
+                                          axis=1)
+            g.add_edges_from(C_to_a_edges)
 
-        Parameters
-        ----------
-        groupNode : string
-            it has a format like 'gxxxixx', if
-        you key insSep set at 'i'
+            # Calculating min cost flow...
+            f = nx.min_cost_flow(g)
 
-        Returns
-        -------
-        int
-            If 0, it's unallocated, otherwise it's the
-        allocated group id
-        """
-        dist = np.linalg.norm(robotInfo[:2] - groupInfo[:2])
-        p = groupInfo[3]
-        if p == 0:
-            p = 1
+            # assign
+            M_new = np.ones(len(data), dtype=np.int) * -1
+            for i in range(len(data)):
+                p = sorted(f[i].items(), key=lambda x: x[1])[-1][0]
+                M_new[i] = p - len(data)
 
-        return dist / p
-
-    def getGroupId(self, groupNode):
-        """Retrieve group-id from group-nodes.
-
-        Parameters
-        ----------
-        groupNode : string
-            Ut has a format like 'gxxxixx',
-            if you key insSep set at 'i'
-
-        Returns
-        -------
-        int
-            group-id
-        """
-        groupId = ''
-        for iGroupId in range(1, len(groupNode)):
-            if groupNode[iGroupId] == self.insSep:
+            # stop condition
+            if np.all(M_new == M):
+                # Stop
+                # return (C, M, f)
                 break
-            else:
-                groupId = groupId + groupNode[iGroupId]
 
-        return (int(groupId))
+            M = M_new
+
+            # compute new centers
+            for i in range(len(C)):
+                C[i, :] = np.mean(data[M == i, :], axis=0)
+
+            if maxiter is not None and itercnt >= maxiter:
+                # Max iterations reached
+                break
+
+            robotGroup = M
+            groupCenter = C[1:-1, :]
+
+            return robotGroup, groupCenter

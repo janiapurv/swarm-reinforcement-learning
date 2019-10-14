@@ -2,7 +2,6 @@ import time
 import yaml
 from pathlib import Path
 
-import numpy as np
 import matplotlib.pyplot as plt
 import pybullet as p
 
@@ -38,11 +37,12 @@ with skip_run('skip', 'plot occupancy grid') as check, check():
 
 with skip_run('run', 'learning tactic') as check, check():
     env = Environment(config)
-    net_output = {}
+    # ['n_robots', 'primitive', 'target_node_id', 0, 0, 0]
+    net_output = [[10, 2, 15, 0, 0, 0], [5, 2, 23, 0, 0, 0],
+                  [10, 2, 17, 0, 0, 0], [10, 2, 9, 0, 0, 0],
+                  [5, 2, 51, 0, 0, 0], [10, 2, 31, 0, 0, 0]]
     for j in range(10):
         start = time.time()
-        for i in range(6):
-            net_output[i] = np.random.rand(1, 6).tolist()[0]
         # print(j)
         env.step(net_output)
         # print(time.time() - start)

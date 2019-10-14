@@ -128,8 +128,10 @@ class Environment():
         """Take a step in the environement
         """
         # Action decoding
-        decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
-            action)
+        # decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
+        #     action)
+        decoded_actions_uav = action[0:3]
+        decoded_actions_ugv = action[3:]
         # Execute the actions
         self.action_manager.primitive_execution(decoded_actions_uav,
                                                 decoded_actions_ugv, p)

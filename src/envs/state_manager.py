@@ -34,7 +34,7 @@ class StateManager():
             info = {}
             info['position'] = [0, 0]
             info['n_floors'] = 1
-            info['primeter'] = 4 * (4 * 3)
+            info['perimeter'] = 4 * (4 * 3)
             info['area'] = 4 * 4
             self.buildings.append(info)
         return None
@@ -48,7 +48,7 @@ class StateManager():
         position_data = genfromtxt(path, delimiter=',')
         for i in range(self.config['simulation']['n_nodes']):
             info = {}
-            info['position'] = position_data[i]
+            info['position'] = [position_data[i][0] - 100, position_data[i][1]]
             info['importance'] = 0
             self.nodes.append(info)
         return None
@@ -68,14 +68,15 @@ class StateManager():
             info['probability_goals_indoor'] = 1 / n_targets
             info['defence_perimeter'] = 0
             info['progress_goals_indoor'] = 0
-            node_info = self.node_info(target)  # Get the position
-            info['position'] = node_info['position']
+
             building_info = self.building_info(target)
-            info['n_defence_perimeter'] = building_info['perimeter'] / (
-                self.config['ugv']['defense_radius'] * 2)
+            info['position'] = building_info['position']
             info['perimeter'] = building_info['perimeter']
             info['area'] = building_info['area']
-            info['n_floors'] = building_info['floors']
+            info['n_floors'] = building_info['n_floors']
+            info['n_defence_perimeter'] = building_info['perimeter'] / (
+                self.config['ugv']['defense_radius'] * 2)
+
             self.target.append(info)
 
     def target_info(self, id):
@@ -108,6 +109,7 @@ class StateManager():
         dict
             A dictionary containing all the information about the node.
         """
+        print(id)
         return self.nodes[id]
 
     def building_info(self, id):

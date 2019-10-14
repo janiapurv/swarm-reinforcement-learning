@@ -71,7 +71,6 @@ class FormationControl():
             del_f_g_ij = -2 * (-curr_loc + centroid_pos)
             del_zeta_ij = kl * max(0, f_g_ij) * del_f_g_ij
 
-        print(np.linalg.norm((alpha * del_zeta_ij) - (gamma * P_ij)))
         if np.linalg.norm((alpha * del_zeta_ij) -
                           (gamma * P_ij)) < 0.05 * vel_max:
 
@@ -116,14 +115,14 @@ class FormationControl():
         """
 
         # Parameters
-        vel_max = 100
+        vel_max = 20
         a = 10
         b = 10
         knn = 6
-        vmax = 2
+        vmax = 5
         alpha = 2
         gamma = 0.5
-        min_dis = 1
+        min_dis = 3
 
         all_drones_pose = np.zeros((len(vehicles), 3))
         pose_new = np.zeros((len(vehicles), 3))
@@ -144,10 +143,16 @@ class FormationControl():
             if dst > vmax:
                 vel = (vmax / dst) * vel
             pos_j = all_drones_pose[j]
-            pose_new[j, :] = [
-                pos_j[0] + dt * vel[0], pos_j[1] + dt * vel[1],
-                pos_j[2] * 0 + 3
-            ]
+            if vehicles[0].type == 'uav':
+                pose_new[j, :] = [
+                    pos_j[0] + dt * vel[0], pos_j[1] + dt * vel[1],
+                    pos_j[2] * 0 + 8
+                ]
+            else:
+                pose_new[j, :] = [
+                    pos_j[0] + dt * vel[0], pos_j[1] + dt * vel[1],
+                    pos_j[2] * 0 + 0.25
+                ]
 
         for j, vehicle in enumerate(vehicles):
             vehicle.updated_pos = pose_new[j, :]

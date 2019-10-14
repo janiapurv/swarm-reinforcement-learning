@@ -57,18 +57,49 @@ class ActionManager(StateManager):
 
         # Get the group/target info
         groupInfo = np.zeros((len(decoded_actions), 6))
-        targetInfo = []
         for i, actions in enumerate(decoded_actions):
-            info = self.node_info(actions[1])
-            groupInfo[i, 0:2] = info['position']
+            info = self.node_info(actions[2])
+            groupInfo[i, 0:2] = info['position'][0:2]
             groupInfo[i, 2] = mt.floor(actions[0])
             groupInfo[i, 3] = groupInfo[i, 3] * 0 + 1
             groupInfo[i, 4] = groupInfo[i, 4] * 0
             groupInfo[i, 5] = groupInfo[i, 5] * 0 + 600
+        return robotInfo, groupInfo
 
-            # Target info (primitive id and target location)
-            targetInfo.append([actions[0], actions[1]])
-        return robotInfo, groupInfo, targetInfo
+    def primitive_parameters(self, decode_actions, vehicles_id, type):
+        info = {}
+        info['vehicles_id'] = vehicles_id
+        info['primitive_id'] = -1
+        info['start_pos'] = [0, 0]
+        info['end_pos'] = [0, 0]
+        info['centroid_pos'] = [0, 0]
+        info['formation_type'] = None
+        info['vehicle_type'] = type
+
+        # Decoded actions is of the form
+        # ['n_vehicles', 'primitive_id', 'target_id']
+        # should implement as a dict
+        if decode_actions[1] < 2:
+            target_info = self.node_info(decode_actions[2])
+            info['end_pos'] = target_info['position']
+            info['start_pos'] = info['centroid_pos']
+            info['centroid_pos'] = info['start_pos']
+            if decode_actions[3] == 0:
+                info['formation_type'] = 'solid'
+            else:
+                info['formation_type'] = 'ring'
+            info['primitive_id'] = decode_actions[1]
+
+        elif decode_actions[1] > 1:
+            target_info = self.node_info(decode_actions[2])
+            info['centroid_pos'] = target_info['position']
+            if decode_actions[3] == 0:
+                info['formation_type'] = 'solid'
+            else:
+                info['formation_type'] = 'ring'
+            info['primitive_id'] = decode_actions[1]
+
+        return info
 
     def perform_task_allocation(self, decoded_actions_uav,
                                 decoded_actions_ugv):
@@ -82,26 +113,31 @@ class ActionManager(StateManager):
             UGV decoded actions
         """
         # UAV allocation
-        robotInfo, groupInfo, targetInfo = self.get_robot_group_info(
+        robotInfo, groupInfo = self.get_robot_group_info(
             self.uav, decoded_actions_uav)
+
         # MRTA
-        robotInfo = self.mrta.allocateRobots(robotInfo, groupInfo)
+        robotInfo, groupCenter = self.mrta.allocateRobots(robotInfo, groupInfo)
         for i in range(self.config['simulation']['n_uav_platoons']):
             vehicles_id = [
                 j for j, item in enumerate(robotInfo) if item - 1 == i
             ]
-            self.uav_platoon[i]._init_setup(vehicles_id, 1)
+            parameters = self.primitive_parameters(decoded_actions_uav[i],
+                                                   vehicles_id, 'uav')
+            self.uav_platoon[i]._init_setup(parameters)
 
         # UGV allocation
-        robotInfo, groupInfo, targetInfo = self.get_robot_group_info(
+        robotInfo, groupInfo = self.get_robot_group_info(
             self.ugv, decoded_actions_uav)
         # MRTA
-        robotInfo = self.mrta.allocateRobots(robotInfo, groupInfo)
+        robotInfo, groupCenter = self.mrta.allocateRobots(robotInfo, groupInfo)
         for i in range(self.config['simulation']['n_ugv_platoons']):
             vehicles_id = [
                 j for j, item in enumerate(robotInfo) if item - 1 == i
             ]
-            self.ugv_platoon[i]._init_setup(vehicles_id, 1)
+            parameters = self.primitive_parameters(decoded_actions_ugv[i],
+                                                   vehicles_id, 'ugv')
+            self.ugv_platoon[i]._init_setup(parameters)
 
         return None
 
@@ -147,7 +183,9 @@ class PrimitiveManager(StateManager):
         self.planning = RRT(self.grid_map)
         self.formation = FormationControl()
 
-    def _init_setup(self, vehicles_id, primitive_id):
+        return None
+
+    def _init_setup(self, primitive_info):
         """Peform initial setup of the primitive
         class with vehicles id and primitive id
 
@@ -159,19 +197,20 @@ class PrimitiveManager(StateManager):
             The primitive id to execute
         """
         # Update vehicles
-        self.vehicle_id = vehicles_id
-        self.primitive_executing = primitive_id
-        self.formation_type = 'solid'
-        self.vehicles = [self.uav[j] for j in vehicles_id]
+        self.vehicles_id = primitive_info['vehicles_id']
+        if primitive_info['vehicle_type'] == 'uav':
+            self.vehicles = [self.uav[j] for j in self.vehicles_id]
+        else:
+            self.vehicles = [self.ugv[j] for j in self.vehicles_id]
         self.n_vehicles = len(self.vehicles)
 
-        if self.n_vehicles > 1:
-            centroid_pos = []
-            for vehicle in self.vehicles:
-                vehicle.idle = False
-                centroid_pos.append(vehicle.current_pos)
-            self.centroid_pos = np.mean(np.asarray(centroid_pos)[:, 0:2],
-                                        axis=0).tolist()
+        # Primitive parameters
+        self.primitive_id = primitive_info['primitive_id'] - 1
+        self.formation_type = primitive_info['formation_type']
+        self.centroid_pos = primitive_info['centroid_pos']
+        self.start_pos = primitive_info['start_pos']
+        self.end_pos = primitive_info['end_pos']
+
         return None
 
     def execute_primitive(self):
@@ -181,20 +220,15 @@ class PrimitiveManager(StateManager):
             self.planning_primitive, self.formation_primitive,
             self.mapping_primitive
         ]
-        primitives[self.primitive_executing]()
-
+        primitives[self.primitive_id]()
         return None
 
     def planning_primitive(self):
         """Performs path planning primitive
         """
-        if self.n_vehicles > 1:  # Cannot do formation with one vehicle
-            dt = 0.1
-            self.vehicles = self.formation.execute(self.vehicles,
-                                                   self.centroid_pos, dt,
-                                                   self.formation_type)
-            for vehicle in self.vehicles:
-                vehicle.set_position(vehicle.updated_pos)
+        # First run the formation
+        self.path = self.planning.find_path(self.start_pos, self.end_pos)
+
         return None
 
     def formation_primitive(self):
@@ -207,6 +241,7 @@ class PrimitiveManager(StateManager):
                                                    self.formation_type)
             for vehicle in self.vehicles:
                 vehicle.set_position(vehicle.updated_pos)
+
         return None
 
     def mapping_primitive(self):
