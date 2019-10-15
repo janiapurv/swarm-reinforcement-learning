@@ -12,11 +12,10 @@ class ObstacleMap:
     Base class defining the interface for maps
     """
     def __init__(self, line):
-        self.line = line if line is not None else DDA()
+        self.line = line if line is not None else DDA3D()
 
     def round_points(self, points):
-        return [(int(round(p[0])), int(round(p[1])), int(round(p[2])))
-                for p in points]
+        return [np.asarray(p, dtype=np.int32) for p in points]
 
     def has_collision(self, start, end):
         """
@@ -45,6 +44,7 @@ class GridObstacleMap(ObstacleMap):
             grid: Numpy array with obstacles marked
             with 1s and 0s everywhere else
         """
+        line = DDA2D() if grid.ndim == 2 else DDA3D()
         super(GridObstacleMap, self).__init__(line)
         self.grid = grid
 
@@ -63,19 +63,12 @@ class GridObstacleMap(ObstacleMap):
         points = self.round_points(self.line.get_points(start, end))
         try:
             for point in points:
-                m, n, o = point
-                if self.grid[m, n, o] < 255:
+                if self.grid[tuple(point)] < 255:
                     return False
         except Exception:
             pass
 
         return True
-
-
-"""
-Line generation algorithms
-==========================
-"""
 
 
 class OctoObstacleMap(ObstacleMap):
@@ -119,7 +112,49 @@ class OctoObstacleMap(ObstacleMap):
                                     maxRange=distance)
 
 
-class DDA:
+"""
+Line generation algorithms
+==========================
+"""
+
+
+class DDA2D:
+    """
+    Digital Differential Analyzer line generation algorithm
+    """
+    def __init__(self):
+        pass
+
+    def get_points(self, start, end):
+        """
+        Generates points on a line segment using DDA algorithm
+
+        Args:
+            start: One endpoint of a line segment
+            end: The other endpoint of a line segment
+
+        Returns:
+            List of points on the line segment
+        """
+
+        points = []
+        sx, sy = start
+        ex, ey = end
+
+        dx, dy = (ex - sx), (ey - sy)
+        step = abs(dx) if (abs(dx) >= abs(dy)) else abs(dy)
+
+        dx, dy = (dx / step), (dy / step)
+
+        x, y, i = sx, sy, 1
+        while i <= step:
+            x, y, i = x + dx, y + dy, i + 1
+            points.append((x, y))
+
+        return points
+
+
+class DDA3D:
     """
     Digital Differential Analyzer line generation algorithm
     """

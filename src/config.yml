@@ -9,8 +9,8 @@ simulation:
   n_buildings: 15
   n_nodes: 53
   n_targets: 3
-  goal_node: 5
-  target_building_id: [10, 5, 6]
+  goal_node: 39
+  target_building_id: [38, 39, 40]
   n_ugv: 25
   n_uav: 25
   n_uav_clusters: 3
@@ -20,12 +20,12 @@ simulation:
 ##---------------------------------------------------------------------##
 # UAV and UGV parameters
 uav:
-  speed: 1.5
-  search_speed: 1.0
-  search_dist: 2
+  speed: 15.0
+  search_speed: 10.0
+  search_dist: 5
 ugv:
-  speed: 0.5
-  search_speed: 0.25
+  speed: 10.0
+  search_speed: 5.25
   defense_radius: 3
 ##---------------------------------------------------------------------##
 # Weigths parameters

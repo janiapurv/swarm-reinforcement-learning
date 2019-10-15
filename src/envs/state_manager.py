@@ -11,14 +11,10 @@ class StateManager():
         self.current_time = current_time
         self.config = config
 
-        self.obstacle_map = np.load(self.config['map_save_path'] +
-                                    'occupancy_map.npy')
-        # Need to zeros to make it 3D
-        temp = np.zeros(self.obstacle_map.shape)
-        self.grid_map = np.dstack((self.obstacle_map, temp))
-
-        self._initial_buildings_setup()
+        self.grid_map = np.load(self.config['map_save_path'] +
+                                'occupancy_map.npy')
         self._initial_nodes_setup()
+        self._initial_buildings_setup()
         self._initial_target_setup()
 
     def _initial_mission_setup(self):
@@ -26,18 +22,6 @@ class StateManager():
         self.progress_reward = self.config['reward']['progress_reward']
         self.indoor_reward = 2 * self.progress_reward
         self.n_keep_in_pareto = self.config['state']['n_keep_in_pareto']
-
-    def _initial_buildings_setup(self):
-        # Buildings setup (probably we might need to read it from a file)
-        self.buildings = []
-        for i in range(self.config['simulation']['n_buildings']):
-            info = {}
-            info['position'] = [0, 0]
-            info['n_floors'] = 1
-            info['perimeter'] = 4 * (4 * 3)
-            info['area'] = 4 * 4
-            self.buildings.append(info)
-        return None
 
     def _initial_nodes_setup(self):
         """Performs initial nodes setup
@@ -48,9 +32,29 @@ class StateManager():
         position_data = genfromtxt(path, delimiter=',')
         for i in range(self.config['simulation']['n_nodes']):
             info = {}
-            info['position'] = [position_data[i][0] - 100, position_data[i][1]]
+            info['position'] = [
+                position_data[i][0] / 1.125, -position_data[i][1] * 1.125
+            ]
             info['importance'] = 0
             self.nodes.append(info)
+        return None
+
+    def _initial_buildings_setup(self):
+        # Buildings setup (probably we might need to read it from a file)
+        self.buildings = []
+        path = self.config['map_data_path'] + 'buildings.csv'
+        data = genfromtxt(path, delimiter=',')
+        for i in range(self.config['simulation']['n_buildings']):
+            info = {}
+            info['target_id'] = data[i][0]
+
+            # Node info (a node is also a building)
+            node_info = self.node_info(int(info['target_id']))
+            info['position'] = node_info['position']
+            info['area'] = data[i][1]
+            info['perimeter'] = data[i][2]
+            info['n_floors'] = data[i][3]
+            self.buildings.append(info)
         return None
 
     def _initial_target_setup(self):
@@ -79,6 +83,39 @@ class StateManager():
 
             self.target.append(info)
 
+    def node_info(self, id):
+        """Get the information about a node.
+
+            Parameters
+            ----------
+            id : int
+                Node ID
+
+            Returns
+            -------
+            dict
+                A dictionary containing all the information about the node.
+            """
+        return self.nodes[id]
+
+    def building_info(self, id):
+        """Get the information about a building such as perimeter,
+            position, number of floors.
+
+            Parameters
+            ----------
+            id : int
+                Building ID
+
+            Returns
+            -------
+            dict
+                A dictionary containing all the information about the building.
+            """
+        for building in self.buildings:
+            if building['target_id'] == id:
+                return building
+
     def target_info(self, id):
         """Get the information about the target.
 
@@ -96,44 +133,6 @@ class StateManager():
             if target['target_id'] == id:
                 return target
 
-    def node_info(self, id):
-        """Get the information about a node.
-
-        Parameters
-        ----------
-        id : int
-            Node ID
-
-        Returns
-        -------
-        dict
-            A dictionary containing all the information about the node.
-        """
-        print(id)
-        return self.nodes[id]
-
-    def building_info(self, id):
-        """Get the information about a building such as perimeter,
-        position, number of floors.
-
-        Parameters
-        ----------
-        id : int
-            Building ID
-
-        Returns
-        -------
-        dict
-            A dictionary containing all the information about the building.
-        """
-        return self.buildings[id]
-
-    def update(self, ugv, uav, current_time):
-        self.ugv = ugv
-        self.uav = uav
-        self.current_time = current_time
-        return None
-
     def check_vehicle(self, vehicle):
         if (not vehicle.idle) and vehicle.type == 'uav':
             return 'uav'
@@ -144,8 +143,8 @@ class StateManager():
 
     def check_closeness(self, vehicle, target):
         target_pos = target['position']
-        vehicle_pos = vehicle['position']
-        dist = np.linalg.norm(vehicle_pos - target_pos)
+        vehicle_pos = vehicle.current_pos
+        dist = np.linalg.norm(vehicle_pos[0:2] - target_pos)
         if vehicle.type == 'uav':
             return dist <= self.config['uav']['search_dist']
         elif vehicle.type == 'ugv':
@@ -154,7 +153,7 @@ class StateManager():
             return None
 
     def outdoor_progress(self, vehicle, target):
-        req_progress = target['n_floor'] * target['perimeter']
+        req_progress = target['n_floors'] * target['perimeter']
         progesse_rate = vehicle.search_speed / req_progress
         progress_goals = self.config['simulation']['time_step'] * progesse_rate
         return progress_goals
@@ -177,6 +176,8 @@ class StateManager():
                 progress_goals = 1
             target[
                 'progress_goals'] = target['progress_goals'] + progress_goals
+            if target['progress_goals'] > 1:
+                target['progress_goals'] = 1
 
         sum_progress = 0
         found_goal = 0
@@ -186,7 +187,7 @@ class StateManager():
                 if target['progress_goals'] >= np.random.rand():
                     # if it finds it in out of building indoor search
                     # target is guaranteed
-                    for i in len(self.target):
+                    for i in range(len(self.target)):
                         if i == j:
                             self.target[i]['probability_goals'] = 1
                             self.target[i]['probability_goals_indoor'] = 1
@@ -226,6 +227,8 @@ class StateManager():
                 progress_goals = 1
             target[
                 'progress_goals'] = target['progress_goals'] + progress_goals
+            if target['progress_goals'] > 1:
+                target['progress_goals'] = 1
 
         sum_progress = 0
         found_goal = 0
@@ -235,7 +238,7 @@ class StateManager():
                 if target['progress_goals'] >= np.random.rand():
                     # if it finds it in out of building indoor search
                     # target is guaranteed
-                    for i in len(self.target):
+                    for i in range(len(self.target)):
                         if i == j:
                             self.target[i]['probability_goals'] = 1
                             self.target[i]['probability_goals_indoor'] = 1
@@ -261,5 +264,10 @@ class StateManager():
         """Update all the probability
         """
         self.indoor_target_progress_update(self.ugv)
-        self.outdoor_target_progress_update(self.uavs)
+        self.outdoor_target_progress_update(self.uav)
+
+        for target in self.target:
+            print(target['probability_goals_outdoor'])
+            print(target['progress_goals'])
+            print('------------------------------')
         return None

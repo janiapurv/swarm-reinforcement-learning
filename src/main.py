@@ -26,10 +26,10 @@ with skip_run('skip', 'plot occupancy grid') as check, check():
     env = Environment(config)
     program_starts = time.time()
     fig, ax = plt.subplots()
-    for i in range(10000):
+    for i in range(2):
         if i < 1:
             rgbImg, depthImg, segImg = env.get_camera_image()
-            plot_occupancy_map(ax, segImg, config, save_array=False)
+            plot_occupancy_map(ax, segImg, config, save_array=True)
         plt.show()
         p.stepSimulation()
         time.sleep(1 / 250)
@@ -38,10 +38,10 @@ with skip_run('skip', 'plot occupancy grid') as check, check():
 with skip_run('run', 'learning tactic') as check, check():
     env = Environment(config)
     # ['n_robots', 'primitive', 'target_node_id', 0, 0, 0]
-    net_output = [[10, 2, 15, 0, 0, 0], [5, 2, 23, 0, 0, 0],
-                  [10, 2, 17, 0, 0, 0], [10, 2, 9, 0, 0, 0],
-                  [5, 2, 51, 0, 0, 0], [10, 2, 31, 0, 0, 0]]
-    for j in range(10):
+    net_output = [[10, 2, 38, 0, 0, 0], [5, 2, 39, 0, 0, 0],
+                  [10, 2, 40, 0, 0, 0], [10, 2, 38, 0, 0, 0],
+                  [5, 2, 39, 0, 0, 0], [10, 2, 40, 0, 0, 0]]
+    for j in range(1000):
         start = time.time()
         # print(j)
         env.step(net_output)

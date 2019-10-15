@@ -33,19 +33,22 @@ class FormationControl():
         peers = np.delete(peers, np.s_[knn:],
                           axis=0)  # deleting farther neighbours
 
-        k = 1  # constant
+        k = 1 / len(peers)  # constant
         P_ij = np.array([0, 0])
 
         for j in range(len(peers)):
             g_lij = (min_dis**2) - (distance.euclidean(curr_loc,
                                                        peers[j, :]))**2
-            del_xij = (-curr_loc + peers[j, :])
+            g_lij = g_lij / (min_dis**2)
+            reach_pos = 0
+            if g_lij < 0.05:
+                reach_dist = 1
+                g_lij = 0
+            del_xij = +1 * (-curr_loc + peers[j, :])
             del_g_ij = 2 * del_xij
-            P_ij = P_ij + k * max(0, g_lij) * (del_g_ij)
+            P_ij = P_ij + (k * (max(0, g_lij)**1 / 3) * (del_g_ij))**1
 
         kl = 1  # constant
-        f_g_ij = (((curr_loc[0] - centroid_pos[0])**2) / a**2) + ((
-            (curr_loc[1] - centroid_pos[1])**2) / b**2) - 1
 
         if formation_type == 'ring':
             a_inner = a - 0.1 * a
@@ -65,23 +68,48 @@ class FormationControl():
             del_f_g_ij = -2 * (-curr_loc + centroid_pos)
             del_zeta_ij = kl * max(0, f_g_ij)
         else:
+            # f_g_ij = np.sign((((curr_loc[0] - centroid_pos[0])**2) / a**2) + ((
+            #     (curr_loc[1] - centroid_pos[1])**2) / b**2) - 1) * abs((((curr_loc[0] - centroid_pos[0])**2) / a**2) + ((
+            #     (curr_loc[1] - centroid_pos[1])**2) / b**2) - 1)
+
             f_g_ij = (((curr_loc[0] - centroid_pos[0])**2) / a**2) + ((
                 (curr_loc[1] - centroid_pos[1])**2) / b**2) - 1
 
-            del_f_g_ij = -2 * (-curr_loc + centroid_pos)
-            del_zeta_ij = kl * max(0, f_g_ij) * del_f_g_ij
+            reach_dist = 0
+            if f_g_ij < 0.05:
+                reach_pos = 1
+                f_g_ij = 0
+            del_f_g_ij = -1 * (-curr_loc + centroid_pos)
+            # print(f_g_ij)
+            del_zeta_ij = ((kl * max(0, f_g_ij))**3) * del_f_g_ij
+            # if 1:
+            #     del_zeta_ij = kl * max(0, f_g_ij) * del_f_g_ij
+            # else:
+            #     del_zeta_ij = kl * max(0, f_g_ij) * del_f_g_ij * 0
 
-        if np.linalg.norm((alpha * del_zeta_ij) -
-                          (gamma * P_ij)) < 0.05 * vel_max:
+            # del_zeta_ij = kl * max(0, f_g_ij) * del_f_g_ij * 0
 
-            vel = path_vel - 0 * (alpha * del_zeta_ij) - (gamma * P_ij)
-        else:
-            vel = path_vel - (alpha * del_zeta_ij) - (gamma * P_ij)
+        vel = path_vel - (alpha * del_zeta_ij) - (gamma * P_ij)
+        # if np.linalg.norm((alpha * del_zeta_ij) -
+        #                   (gamma * P_ij)) < 0.1 * vel_max:
+        #
+        #     vel = path_vel - 0 * ((alpha * del_zeta_ij) - (gamma * P_ij))
+        # elif np.linalg.norm((alpha * del_zeta_ij) -
+        #                   (gamma * P_ij)) > 0.1 * vel_max:
+        #
+        #     vel = path_vel - (0.1 * vel_max / np.linalg.norm((alpha * del_zeta_ij) -
+        #                   (gamma * P_ij))) * ((alpha * del_zeta_ij) - (gamma * P_ij))
+        # else:
+        #     vel = path_vel - (alpha * del_zeta_ij) - (gamma * P_ij)
 
         if vel_max is not None:
             vel[0] = self.getFeasibleSpeed(vel[0], vel_max)
             vel[1] = self.getFeasibleSpeed(vel[1], vel_max)
-        return vel
+
+        formation_done = 0
+        if reach_pos:
+            formation_done = 1
+        return vel, formation_done
 
     def getFeasibleSpeed(self, vel, vel_max):
         """This function limit the velocity returned
@@ -115,13 +143,13 @@ class FormationControl():
         """
 
         # Parameters
-        vel_max = 20
-        a = 10
-        b = 10
+        vel_max = 100
+        a = 5
+        b = 5
         knn = 6
-        vmax = 5
-        alpha = 2
-        gamma = 0.5
+        vmax = vehicles[0].speed
+        alpha = 1
+        gamma = 10
         min_dis = 3
 
         all_drones_pose = np.zeros((len(vehicles), 3))
@@ -136,25 +164,20 @@ class FormationControl():
             path_vel = (1 / dt) * path_vel
             curr_pos = all_drones_pose[:, 0:2]
 
-            vel = self.get_vel(j, curr_pos, min_dis, centroid_pos, alpha,
-                               gamma, path_vel, vel_max, a, b, knn,
-                               formation_type)
+            vel, formation_done = self.get_vel(j, curr_pos, min_dis,
+                                               centroid_pos, alpha, gamma,
+                                               path_vel, vel_max, a, b, knn,
+                                               formation_type)
             dst = np.linalg.norm(vel)
             if dst > vmax:
                 vel = (vmax / dst) * vel
             pos_j = all_drones_pose[j]
-            if vehicles[0].type == 'uav':
-                pose_new[j, :] = [
-                    pos_j[0] + dt * vel[0], pos_j[1] + dt * vel[1],
-                    pos_j[2] * 0 + 8
-                ]
-            else:
-                pose_new[j, :] = [
-                    pos_j[0] + dt * vel[0], pos_j[1] + dt * vel[1],
-                    pos_j[2] * 0 + 0.25
-                ]
+            pose_new[j, :] = [
+                pos_j[0] + dt * vel[0], pos_j[1] + dt * vel[1],
+                pos_j[2] * 0 + 3
+            ]
 
         for j, vehicle in enumerate(vehicles):
             vehicle.updated_pos = pose_new[j, :]
 
-        return vehicles
+        return vehicles, formation_done

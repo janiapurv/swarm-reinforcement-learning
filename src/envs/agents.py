@@ -48,6 +48,24 @@ class UGV():
         euler = p.getEulerFromQuaternion(rot)
         return np.array(pos), euler[2]
 
+    def get_info(self):
+        """Returns the information about the UGV
+
+        Returns
+        -------
+        dict
+            A dictionary containing all the information
+        """
+        info = {}
+        info['current_pos'] = self.current_pos
+        info['updated_pos'] = self.updated_pos
+        info['idle'] = self.idle
+        info['ammo'] = self.ammo
+        info['functional'] = self.functional
+        info['type'] = self.type
+
+        return info
+
     def set_position(self, position):
         """This function moves the vehicles to given position
 
@@ -91,6 +109,24 @@ class UAV():
         self.pybullet_id = p.loadURDF(str(path), self.init_pos,
                                       self.init_orientation)
         return None
+
+    def get_info(self):
+        """Returns the information about the UGV
+
+        Returns
+        -------
+        dict
+            A dictionary containing all the information
+        """
+        info = {}
+        info['current_pos'] = self.current_pos
+        info['updated_pos'] = self.updated_pos
+        info['idle'] = self.idle
+        info['battery'] = self.battery
+        info['functional'] = self.functional
+        info['type'] = self.type
+
+        return info
 
     def reset(self):
         """Moves the robot back to its initial position

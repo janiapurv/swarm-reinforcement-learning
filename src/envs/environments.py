@@ -17,7 +17,7 @@ def get_initial_position(agent):
     grid = np.arange(25).reshape(5, 5)
     pos_xy = np.where(grid == agent)
     # pos_xy = pos_xy  * 200
-    return [pos_xy[0][0] * 10, pos_xy[1][0] * 10]
+    return [pos_xy[0][0] * 10 - 100, pos_xy[1][0] * 10 - 100]
 
 
 class Environment():
@@ -25,7 +25,12 @@ class Environment():
         if config['simulation']['headless']:
             p.connect(p.DIRECT)  # Non-graphical version
         else:
+
             p.connect(p.GUI)
+            p.resetDebugVisualizerCamera(cameraDistance=60,
+                                         cameraYaw=215,
+                                         cameraPitch=-35,
+                                         cameraTargetPosition=[0, 0, 0])
 
         # Environment parameters
         self.n_ugv = config['simulation']['n_ugv']
@@ -60,7 +65,7 @@ class Environment():
                    useFixedBase=True,
                    globalScaling=10)
         path = Path(__file__).parents[0] / 'urdf/environment.urdf'
-        p.loadURDF(str(path), [100, 40, 0.1],
+        p.loadURDF(str(path), [23.655, -58.487, 0.1],
                    p.getQuaternionFromEuler([0, 0, math.pi / 2]),
                    useFixedBase=True)
 
@@ -89,8 +94,8 @@ class Environment():
         """
         upAxisIndex = 2
         camDistance = 100
-        pixelWidth = 700 * 5
-        pixelHeight = 350 * 5
+        pixelWidth = 700
+        pixelHeight = 350
         camTargetPos = [0, 0, 0]
 
         far = camDistance
@@ -135,6 +140,7 @@ class Environment():
         # Execute the actions
         self.action_manager.primitive_execution(decoded_actions_uav,
                                                 decoded_actions_ugv, p)
+        self.state_manager.update_progress()
         # Get the new encoded state
         new_state = self.state.get_state()
         # # Get reward

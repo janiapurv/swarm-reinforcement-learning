@@ -16,12 +16,12 @@ class RRT:
     """
     def __init__(self,
                  obstacle_map,
-                 k=250,
-                 dt=1,
-                 init=(0, 0, 0),
+                 k=50,
+                 dt=5,
+                 init=(0, 0),
                  low=0,
                  high=100,
-                 dim=3):
+                 dim=2):
         """
         Generates RRT graph with obstacle avoidance
 
