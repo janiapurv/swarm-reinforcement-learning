@@ -7,8 +7,6 @@ import math
 import numpy as np
 import networkx as nx
 
-from .planning_utils import GridObstacleMap
-
 
 class RRT:
     """
@@ -16,12 +14,12 @@ class RRT:
     """
     def __init__(self,
                  obstacle_map,
-                 k=50,
-                 dt=5,
-                 init=(0, 0),
+                 k=250,
+                 dt=1,
+                 init=(0, 0, 0),
                  low=0,
                  high=100,
-                 dim=2):
+                 dim=3):
         """
         Generates RRT graph with obstacle avoidance
 
@@ -40,7 +38,8 @@ class RRT:
         self.low = low
         self.high = high
         self.dim = dim
-        self.map = GridObstacleMap(grid=obstacle_map)
+        self.map = obstacle_map
+        self.debug_points = []
         self.rrt = self.generate_rrt(k, dt, init)
 
     def generate_rrt(self, k, dt, x_init):
@@ -100,7 +99,7 @@ class RRT:
             u = self.select_input(x_rand, x_near)
             x_new = self.new_state(x_near, u, self.dt)
 
-            if self.map.has_collision(x_new, x_near):
+            if not self.map.has_collision(x_new, x_near):
                 break
 
         return x_new, x_near, u, self.distance(x_near, x_new)
@@ -115,7 +114,8 @@ class RRT:
         return np.linalg.norm(x1 - x2)
 
     def random_state(self):
-        return np.random.uniform(self.low, self.high, self.dim)
+        point = np.random.uniform(self.low, self.high, self.dim)
+        return point
 
     def nearest_neighbor(self, x_rand, T):
         min_distance = math.inf
@@ -131,7 +131,8 @@ class RRT:
         return result.astype(dtype=np.float64)
 
     def select_input(self, x_rand, x_near):
-        return x_rand - x_near
+        d = x_rand - x_near
+        return d / np.linalg.norm(d)
 
     def new_state(self, x_near, u, dt):
         return x_near + u * dt

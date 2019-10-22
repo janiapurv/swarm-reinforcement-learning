@@ -26,7 +26,8 @@ def cluster(vehicles, n_clusters, config):
     cluster_ids, cluster_pos
         Cluster ids and mean cluster position
     """
-    features = get_features(vehicles, config)
+    # Get unique features
+    features = np.unique(get_features(vehicles, config), axis=0)
     kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(features)
     cluster_ids = kmeans.labels_
     cluster_pos = []
@@ -37,6 +38,21 @@ def cluster(vehicles, n_clusters, config):
 
 
 def get_features(vehicles, config):
+    """Get the features to be used for clustering
+
+    Parameters
+    ----------
+    vehicles : list
+        A list of UGV or UAV class
+    config : yaml
+        The configuration file
+
+    Returns
+    -------
+    array
+        A numpy array containing 3 features namely x, y position
+        and battery or ammon depeding the vehicle type
+    """
     w_cluster_battery_pos = config['weights']['w_cluster_battery_pos']
     w_cluster_ammo_pos = config['weights']['w_cluster_ammo_pos']
     features = []
@@ -56,6 +72,24 @@ def get_features(vehicles, config):
 
 
 def get_least_crowding(importance, n_targets, pareto_list, n_keep_in_pareto):
+    """Get the crowding distance
+
+    Parameters
+    ----------
+    importance : array
+        An array with impotance of each node
+    n_targets : int
+        Number of targets in the mission
+    pareto_list : list
+        The nodes which are in pareto list
+    n_keep_in_pareto : int
+        Number of points to keep from pareto list
+
+    Returns
+    -------
+    list
+        A list containing top nodes depending on the crowding distance
+    """
     range_f = np.zeros(shape=[n_targets, 1])
     MAX_NUM = 0
     for j in range(n_targets):
@@ -82,7 +116,25 @@ def get_least_crowding(importance, n_targets, pareto_list, n_keep_in_pareto):
     return least_crowded_index
 
 
-def pareto_opt(importance, n_nodes, n_targets, n_keep_in_pareto):  # noqa: C901
+def pareto_opt(importance, n_nodes, n_targets, n_keep_in_pareto):  # noqa
+    """Performs pareto optimisation to get the top nodes to visit
+
+    Parameters
+    ----------
+    importance : array
+        An array with impotance of each node
+    n_nodes : int
+        Number of nodes in the graph
+    n_targets : int
+        Number of targets in the mission
+    n_keep_in_pareto : int
+        Number of points to keep from pareto list
+
+    Returns
+    -------
+    list
+        A list containing top nodes depending on the crowding distance
+    """
     arg_s = np.argsort(importance[:, 0])  # minimization
     importance_updated = np.zeros((n_nodes, n_targets))
     for i in range(n_nodes):
@@ -126,6 +178,8 @@ class State(StateManager):
         return None
 
     def _init_cluster_setup(self):
+        """Initial cluster setup
+        """
         self.uav_clusters = []
         for i in range(self.config['simulation']['n_uav_clusters']):
             info = {}
@@ -141,6 +195,8 @@ class State(StateManager):
         return None
 
     def get_pareto_nodes_online(self):
+        """Get pareto nodes to visit running online
+        """
         n_keep_in_pareto = self.config['state']['n_keep_in_pareto']
         n_nodes = self.config['simulation']['n_nodes']
         n_targets = self.config['simulation']['n_targets']
@@ -164,6 +220,8 @@ class State(StateManager):
         return pareto_nodes
 
     def get_state(self):
+        """Get the state of the mission.
+        """
         # Perform clustering on UAV and UGV
         n_ugv_clusters = self.config['simulation']['n_ugv_clusters']
         n_uav_clusters = self.config['simulation']['n_uav_clusters']

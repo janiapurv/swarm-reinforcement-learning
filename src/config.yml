@@ -3,7 +3,7 @@
 simulation:
   total_time: 600
   current_time: 0
-  time_step: 1
+  time_step: 0.1
   headless: False
   episodes: 100
   n_buildings: 15
@@ -20,12 +20,12 @@ simulation:
 ##---------------------------------------------------------------------##
 # UAV and UGV parameters
 uav:
-  speed: 15.0
-  search_speed: 10.0
+  speed: 10.0
+  search_speed: 2.0
   search_dist: 5
 ugv:
-  speed: 10.0
-  search_speed: 5.25
+  speed: 5.5
+  search_speed: 1.0
   defense_radius: 3
 ##---------------------------------------------------------------------##
 # Weigths parameters
@@ -80,3 +80,4 @@ red_team:
 # Paths
 map_data_path: 'data/processed/map_data/'
 map_save_path: 'data/processed/map_data/'
+log_path: 'data/log/'

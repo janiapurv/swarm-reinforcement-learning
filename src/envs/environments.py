@@ -17,7 +17,7 @@ def get_initial_position(agent):
     grid = np.arange(25).reshape(5, 5)
     pos_xy = np.where(grid == agent)
     # pos_xy = pos_xy  * 200
-    return [pos_xy[0][0] * 10 - 100, pos_xy[1][0] * 10 - 100]
+    return [pos_xy[0][0] * 10 + 50, pos_xy[1][0] * 10]
 
 
 class Environment():
@@ -25,13 +25,12 @@ class Environment():
         if config['simulation']['headless']:
             p.connect(p.DIRECT)  # Non-graphical version
         else:
-
+            p.connect(p.SHARED_MEMORY)
             p.connect(p.GUI)
-            p.resetDebugVisualizerCamera(cameraDistance=60,
-                                         cameraYaw=215,
-                                         cameraPitch=-35,
-                                         cameraTargetPosition=[0, 0, 0])
-
+            p.resetDebugVisualizerCamera(cameraDistance=150,
+                                         cameraYaw=0,
+                                         cameraPitch=-89.999,
+                                         cameraTargetPosition=[0, 80, 0])
         # Environment parameters
         self.n_ugv = config['simulation']['n_ugv']
         self.n_uav = config['simulation']['n_uav']
@@ -54,18 +53,22 @@ class Environment():
         # Initialize the state and action components
         self.state_manager = StateManager(self.uav, self.ugv,
                                           self.current_time, self.config)
+        self.state_manager._initial_mission_setup()
         self.state = State(self.state_manager)
         self.action = Action(self.state_manager)
         self.action_manager = ActionManager(self.state_manager)
 
     def _initial_setup(self):
         # Setup ground
-        p.loadURDF("plane.urdf", [0, 0, 0],
-                   p.getQuaternionFromEuler([0, 0, math.pi / 2]),
-                   useFixedBase=True,
-                   globalScaling=10)
+        plane = p.loadURDF("plane.urdf", [0, 0, 0],
+                           p.getQuaternionFromEuler([0, 0, math.pi / 2]),
+                           useFixedBase=True,
+                           globalScaling=20)
+        texture = p.loadTexture('src/envs/images/mud.png')
+        p.changeVisualShape(plane, -1, textureUniqueId=texture)
+
         path = Path(__file__).parents[0] / 'urdf/environment.urdf'
-        p.loadURDF(str(path), [23.655, -58.487, 0.1],
+        p.loadURDF(str(path), [58.487, 23.655, 0.1],
                    p.getQuaternionFromEuler([0, 0, math.pi / 2]),
                    useFixedBase=True)
 
@@ -82,6 +85,7 @@ class Environment():
             init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25 - 1.5, 5]
             self.uav.append(
                 UAV(init_pos, init_orientation, i, 1 / 10, self.config))
+
         return None
 
     def get_camera_image(self):
@@ -93,7 +97,7 @@ class Environment():
             Three arrays corresponding to rgb, depth, and segmentation image.
         """
         upAxisIndex = 2
-        camDistance = 100
+        camDistance = 500
         pixelWidth = 700
         pixelHeight = 350
         camTargetPos = [0, 0, 0]
@@ -102,7 +106,7 @@ class Environment():
         near = -far
         view_matrix = p.computeViewMatrixFromYawPitchRoll(
             camTargetPos, camDistance, 0, 90, 0, upAxisIndex)
-        projection_matrix = p.computeProjectionMatrix(125, -175, -75, 75, near,
+        projection_matrix = p.computeProjectionMatrix(50, -250, -90, 60, near,
                                                       far)
         # Get depth values using the OpenGL renderer
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
@@ -135,6 +139,7 @@ class Environment():
         # Action decoding
         # decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
         #     action)
+        # new_state = self.state.get_state()
         decoded_actions_uav = action[0:3]
         decoded_actions_ugv = action[3:]
         # Execute the actions
@@ -142,7 +147,7 @@ class Environment():
                                                 decoded_actions_ugv, p)
         self.state_manager.update_progress()
         # Get the new encoded state
-        new_state = self.state.get_state()
+        new_state = 0  # self.state.get_state()
         # # Get reward
         # reward = mission_reward(self.uav, self.ugv, self.config)
         reward = 0

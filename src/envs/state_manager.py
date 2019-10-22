@@ -11,13 +11,14 @@ class StateManager():
         self.current_time = current_time
         self.config = config
 
-        self.grid_map = np.load(self.config['map_save_path'] +
-                                'occupancy_map.npy')
+        # Initial setup
         self._initial_nodes_setup()
         self._initial_buildings_setup()
         self._initial_target_setup()
 
     def _initial_mission_setup(self):
+        temp = np.load(self.config['map_save_path'] + 'occupancy_map.npy')
+        self.grid_map = temp.transpose()
         self.goal = self.config['simulation']['goal_node']
         self.progress_reward = self.config['reward']['progress_reward']
         self.indoor_reward = 2 * self.progress_reward
@@ -33,7 +34,7 @@ class StateManager():
         for i in range(self.config['simulation']['n_nodes']):
             info = {}
             info['position'] = [
-                position_data[i][0] / 1.125, -position_data[i][1] * 1.125
+                position_data[i][1] * 1.125, position_data[i][0] / 1.125
             ]
             info['importance'] = 0
             self.nodes.append(info)
@@ -48,7 +49,7 @@ class StateManager():
             info = {}
             info['target_id'] = data[i][0]
 
-            # Node info (a node is also a building)
+            # Node info (a building is also a node)
             node_info = self.node_info(int(info['target_id']))
             info['position'] = node_info['position']
             info['area'] = data[i][1]
@@ -144,7 +145,8 @@ class StateManager():
     def check_closeness(self, vehicle, target):
         target_pos = target['position']
         vehicle_pos = vehicle.current_pos
-        dist = np.linalg.norm(vehicle_pos[0:2] - target_pos)
+        dist = np.linalg.norm(
+            np.asarray(vehicle_pos[0:2]) - np.asarray(target_pos))
         if vehicle.type == 'uav':
             return dist <= self.config['uav']['search_dist']
         elif vehicle.type == 'ugv':
@@ -159,7 +161,7 @@ class StateManager():
         return progress_goals
 
     def indoor_progress(self, vehicle, target):
-        req_progress = target['n_floor'] * target['area']
+        req_progress = target['n_floors'] * target['area']
         progesse_rate = vehicle.search_speed / req_progress
         progress_goals = self.config['simulation']['time_step'] * progesse_rate
         return progress_goals
@@ -265,9 +267,14 @@ class StateManager():
         """
         self.indoor_target_progress_update(self.ugv)
         self.outdoor_target_progress_update(self.uav)
+        done = False
+        if self.target[1]['probability_goals_outdoor'] == 0:
+            done = True
 
-        for target in self.target:
-            print(target['probability_goals_outdoor'])
-            print(target['progress_goals'])
-            print('------------------------------')
-        return None
+        for vehicle in self.uav:
+            vehicle.current_pos = vehicle.updated_pos
+
+        for vehicle in self.ugv:
+            vehicle.current_pos = vehicle.updated_pos
+
+        return done

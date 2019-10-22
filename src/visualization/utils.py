@@ -13,11 +13,16 @@ def plot_occupancy_map(ax, image, config, save_array=False):
     -------
     None
     """
-    ax.imshow(np.flip(image, axis=0), origin='lower')
+
+    temp = (image - np.mean(image)) / np.std(image)
+    temp[temp > 0.2] = 1
+    temp[(temp < 0.2) & (temp > 0)] = 0
+    temp[temp < 0] = -1
+    ax.imshow(np.flip(temp, axis=0), origin='lower')
 
     # Save the map
     if save_array:
         file_name = config['map_save_path'] + 'occupancy_map.npy'
-        np.save(file_name, np.flip(image, axis=0))
+        np.save(file_name, np.flip(temp, axis=0))
 
     return None

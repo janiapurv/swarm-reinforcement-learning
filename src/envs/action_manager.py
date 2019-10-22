@@ -1,10 +1,17 @@
 import math as mt
 import numpy as np
+from scipy import interpolate
+
+# import matplotlib.pyplot as plt
 
 from .state_manager import StateManager
-from .primitives.planning import RRT
-from .primitives.formation import FormationControl
-from .primitives.task_allocation import MRTA
+
+from primitives.planning.planners import RRT
+from primitives.planning.maps import GridObstacleMap
+# from primitives.planning.plots import Plot2D
+
+from primitives.formation.control import FormationControl
+from primitives.mrta.task_allocation import MRTA
 
 
 class ActionManager(StateManager):
@@ -17,6 +24,7 @@ class ActionManager(StateManager):
 
         # Setup the platoons
         self._init_platoons_setup()
+        return None
 
     def _init_platoons_setup(self):
         """Initial setup of platoons with primitive execution class
@@ -29,7 +37,6 @@ class ActionManager(StateManager):
         self.ugv_platoon = []
         for i in range(self.config['simulation']['n_ugv_platoons']):
             self.ugv_platoon.append(PrimitiveManager(self.state_manager))
-
         return None
 
     def get_robot_group_info(self, vehicles, decoded_actions):
@@ -71,35 +78,30 @@ class ActionManager(StateManager):
         info = {}
         info['vehicles_id'] = vehicles_id
         info['primitive_id'] = -1
-        info['start_pos'] = [0, 0]
         info['end_pos'] = [0, 0]
-        info['centroid_pos'] = [0, 0]
         info['formation_type'] = None
         info['vehicle_type'] = type
 
         # Decoded actions is of the form
         # ['n_vehicles', 'primitive_id', 'target_id']
         # should implement as a dict
-        if decode_actions[1] < 2:
+        if decode_actions[1] == 1:
             target_info = self.node_info(decode_actions[2])
-            info['centroid_pos'] = [0, 0]
-            info['start_pos'] = info['centroid_pos']
             info['end_pos'] = target_info['position']
             info['primitive_id'] = decode_actions[1]
 
-        elif decode_actions[1] > 1:
+        elif decode_actions[1] == 2:
             target_info = self.node_info(decode_actions[2])
-            info['centroid_pos'] = target_info['position']
+            info['end_pos'] = target_info['position']
             if decode_actions[3] == 0:
                 info['formation_type'] = 'solid'
             else:
                 info['formation_type'] = 'ring'
             info['primitive_id'] = decode_actions[1]
-
         return info
 
-    def perform_task_allocation(self, decoded_actions_uav,
-                                decoded_actions_ugv):
+    def perform_marta_task_allocation(self, decoded_actions_uav,
+                                      decoded_actions_ugv):
         """Perfroms task allocation using MRTA
 
         Parameters
@@ -135,11 +137,41 @@ class ActionManager(StateManager):
             parameters = self.primitive_parameters(decoded_actions_ugv[i],
                                                    vehicles_id, [0, 0], 'ugv')
             self.ugv_platoon[i]._init_setup(parameters)
-
         return None
 
-    def primitive_execution(self, decoded_actions_uav, decoded_actions_ugv,
-                            p_simulation):
+    def perform_task_allocation(self, decoded_actions_uav,
+                                decoded_actions_ugv):
+        """Perfroms task allocation using MRTA
+
+        Parameters
+        ----------
+        decoded_actions_uav : array
+            UAV decoded actions
+        decoded_actions_ugv : array
+            UGV decoded actions
+        """
+        ids = 0
+        for i in range(self.config['simulation']['n_uav_platoons']):
+            vehicles_id = list(range(ids, ids + decoded_actions_uav[i][0]))
+            ids = ids + decoded_actions_uav[i][0]
+            parameters = self.primitive_parameters(decoded_actions_uav[i],
+                                                   vehicles_id, [0, 0], 'uav')
+            self.uav_platoon[i]._init_setup(parameters)
+
+        ids = 0
+        for i in range(self.config['simulation']['n_ugv_platoons']):
+            vehicles_id = list(range(ids, ids + decoded_actions_ugv[i][0]))
+            ids = ids + decoded_actions_ugv[i][0]
+            parameters = self.primitive_parameters(decoded_actions_ugv[i],
+                                                   vehicles_id, [0, 0], 'ugv')
+            self.ugv_platoon[i]._init_setup(parameters)
+        return None
+
+    def primitive_execution(self,
+                            decoded_actions_uav,
+                            decoded_actions_ugv,
+                            p_simulation,
+                            hand_coded=True):
         """Performs task execution
 
         Parameters
@@ -150,9 +182,16 @@ class ActionManager(StateManager):
             UAV decoded actions
         p_simulation : bullet engine
             Bullet engine to execute the simulation
+        hand_coded : bool
+            Whether hand coded tactics are being used or not
         """
 
-        self.perform_task_allocation(decoded_actions_uav, decoded_actions_ugv)
+        if hand_coded:
+            self.perform_task_allocation(decoded_actions_uav,
+                                         decoded_actions_ugv)
+        else:
+            self.perform_marta_task_allocation(decoded_actions_uav,
+                                               decoded_actions_ugv)
 
         # Execute them
         for i in range(100):
@@ -162,18 +201,22 @@ class ActionManager(StateManager):
             done = []
             # Update all the uav vehicles
             for i in range(self.config['simulation']['n_uav_platoons']):
-                done.append(self.uav_platoon[i].execute_primitive())
+                if self.uav_platoon[i].n_vehicles > 0:
+                    done.append(
+                        self.uav_platoon[i].execute_primitive(p_simulation))
 
             # Update all the ugv vehicles
             for i in range(self.config['simulation']['n_ugv_platoons']):
-                done.append(self.ugv_platoon[i].execute_primitive())
-
-            self.ugv_platoon[2].save_data()
+                if self.ugv_platoon[i].n_vehicles > 0:
+                    done.append(
+                        self.ugv_platoon[i].execute_primitive(p_simulation))
 
             # if 1 in done:
             #     break
             p_simulation.stepSimulation()
-
+            # p_simulation.startStateLogging(
+            #     p_simulation.STATE_LOGGING_GENERIC_ROBOT,
+            #     self.config['log_path'] + "LOG00048.TXT")
         return None
 
 
@@ -182,8 +225,23 @@ class PrimitiveManager(StateManager):
         super(PrimitiveManager,
               self).__init__(state_manager.uav, state_manager.ugv,
                              state_manager.current_time, state_manager.config)
-        # Primitives
-        self.planning = RRT(self.grid_map)
+        self.state_manager = state_manager
+        obstacele_map = GridObstacleMap(grid=state_manager.grid_map)
+        self.planning = RRT(obstacele_map,
+                            k=200,
+                            dt=15,
+                            init=(185, 65),
+                            low=(0, 0),
+                            high=(350, 700),
+                            dim=2)
+        # start_p = self.convert_pixel_ordinate([0, 0], ispixel=False)
+        # end_p = self.convert_pixel_ordinate([40, 200], ispixel=False)
+        # path = self.planning.find_path(start_p, end_p)
+        # for item in path:
+        #     plt.scatter(item[0], item[1], s=50)
+        # Plot2D().draw_rrt(self.planning.rrt,
+        #                   draw_nodes=False,
+        #                   omap=state_manager.grid_map.transpose())
         self.formation = FormationControl()
         return None
 
@@ -199,65 +257,119 @@ class PrimitiveManager(StateManager):
         """
         # Update vehicles
         self.vehicles_id = primitive_info['vehicles_id']
+
         if primitive_info['vehicle_type'] == 'uav':
             self.vehicles = [self.uav[j] for j in self.vehicles_id]
         else:
             self.vehicles = [self.ugv[j] for j in self.vehicles_id]
         self.n_vehicles = len(self.vehicles)
-        # Make them non idle
-        for vehicle in self.vehicles:
-            vehicle.idle = False
 
         # Primitive parameters
-        self.primitive_id = primitive_info['primitive_id'] - 1
+        self.primitive_id = primitive_info['primitive_id']
         self.formation_type = primitive_info['formation_type']
-        self.centroid_pos = primitive_info['centroid_pos']
-        self.start_pos = primitive_info['start_pos']
         self.end_pos = primitive_info['end_pos']
 
+        if self.primitive_id == 1:
+            self.count = 0
+
         return None
 
-    def save_data(self):
+    def make_vehicles_idle(self):
         for vehicle in self.vehicles:
-            vehicle.get_info()
+            vehicle.idle = True
         return None
 
-    def execute_primitive(self):
+    def make_vehicles_nonidle(self):
+        for vehicle in self.vehicles:
+            vehicle.idle = False
+        return None
+
+    def get_centroid(self):
+        centroid = []
+        for vehicle in self.vehicles:
+            centroid.append(vehicle.current_pos)
+        centroid = np.mean(np.asarray(centroid), axis=0)
+        return centroid[0:2]  # only x and y
+
+    def execute_primitive(self, p):
         """Perform primitive execution
         """
         primitives = [
             self.planning_primitive, self.formation_primitive,
             self.mapping_primitive
         ]
-        done = primitives[self.primitive_id]()
+        done = primitives[self.primitive_id - 1](p)
         return done
 
-    def planning_primitive(self):
+    def convert_pixel_ordinate(self, point, ispixel):
+        if not ispixel:
+            converted = [point[0] / 0.42871 + 145, point[1] / 0.42871 + 115]
+        else:
+            converted = [(point[0] - 145) * 0.42871,
+                         (point[1] - 115) * 0.42871]
+
+        return converted
+
+    def planning_primitive(self, p):
         """Performs path planning primitive
         """
-        # First run the formation
-        self.start_pos = [
-            self.start_pos[0] * -2.7334 + 619.00,
-            self.start_pos[1] * -3.0691 + 216.0
-        ]
-        self.end_pos = [
-            self.end_pos[0] * -2.7334 + 619.00,
-            self.end_pos[1] * -3.0691 + 216.0
-        ]
-        self.path = self.planning.find_path(self.start_pos, self.end_pos)
-        print(self.path)
+        if self.count == 0:
+            self.centroid_pos = self.get_centroid()
+            self.next_pos = self.centroid_pos
+            done = self.formation_primitive(p)
+            if done:
+                self.count = 1
+        else:
+            self.start_pos = self.centroid_pos
+            pixel_start = self.convert_pixel_ordinate(self.start_pos,
+                                                      ispixel=False)
+            pixel_end = self.convert_pixel_ordinate(self.end_pos,
+                                                    ispixel=False)
+
+            # Perform path planning
+            path = self.planning.find_path(pixel_start, pixel_end)
+
+            # Convert from pixel space to cartesian space
+            points = np.zeros((len(path), 2))
+            for i, point in enumerate(path):
+                points[i, :] = self.convert_pixel_ordinate(point, ispixel=True)
+
+            if len(points) > 3:  # Cannot fit a spline with 2 points
+                # Construct a smooth curve through the points
+                tck, u = interpolate.splprep(points.T, s=0)
+                unew = np.linspace(u.min(), u.max(), len(points))
+                x_new, y_new = interpolate.splev(unew, tck)
+                new_points = np.array([x_new, y_new]).T
+
+                # The next point should be atleast 2.5 meter away
+                # from the centroid
+                self.centroid_pos = self.get_centroid()
+                d = np.linalg.norm(self.centroid_pos - new_points, axis=1)
+                index = np.where(d > 12.0)[0]
+                if len(index) > 0:
+                    self.next_pos = new_points[index[0]]
+                else:
+                    self.next_pos = self.get_centroid()
+            else:
+                self.next_pos = self.end_pos
+
+            self.formation_primitive(p)
 
         return None
 
-    def formation_primitive(self):
+    def formation_primitive(self, p):
         """Performs formation primitive
         """
-        if self.n_vehicles > 1:  # Cannot do formation with one vehicle
-            dt = 0.1
-            self.vehicles, formation_done = self.formation.execute(
-                self.vehicles, self.centroid_pos, dt, self.formation_type)
-            for vehicle in self.vehicles:
-                vehicle.set_position(vehicle.updated_pos)
+        self.make_vehicles_nonidle()
+        dt = self.config['simulation']['time_step']
+        self.vehicles, formation_done = self.formation.execute(
+            self.vehicles, self.next_pos, self.centroid_pos, dt,
+            self.formation_type)
+        for vehicle in self.vehicles:
+            vehicle.set_position(vehicle.updated_pos)
+
+        if formation_done:
+            self.make_vehicles_idle()
 
         return formation_done
 
@@ -272,3 +384,13 @@ class PrimitiveManager(StateManager):
             for vehicle in self.vehicles:
                 vehicle.set_position(vehicle.updated_pos)
         return None
+
+
+# for item in path:
+#     temp = self.convert_pixel_ordinate(item, ispixel=True)
+#     pos = [temp[0], temp[1], 2]
+#     a = p.createVisualShape(p.GEOM_SPHERE,
+#                             radius=1,
+#                             rgbaColor=[1, 0, 0, 1],
+#                             visualFramePosition=pos)
+#     p.createMultiBody(0, baseVisualShapeIndex=a)
