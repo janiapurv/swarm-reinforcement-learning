@@ -14,6 +14,7 @@ class UGV():
         self.current_pos = init_pos
         self.updated_pos = init_pos
         self.init_orientation = init_orientation
+        self.cluster_id = 0
         self.idle = True
         self.ammo = 100
         self.functional = True
@@ -94,6 +95,7 @@ class UAV():
         self.current_pos = init_pos
         self.updated_pos = init_pos
         self.init_orientation = init_orientation
+        self.cluster_id = 0
         self.idle = True
         self.battery = 100
         self.functional = True

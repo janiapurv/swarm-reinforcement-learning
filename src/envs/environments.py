@@ -16,8 +16,7 @@ from .agents import UAV, UGV
 def get_initial_position(agent):
     grid = np.arange(25).reshape(5, 5)
     pos_xy = np.where(grid == agent)
-    # pos_xy = pos_xy  * 200
-    return [pos_xy[0][0] * 10 + 50, pos_xy[1][0] * 10]
+    return [pos_xy[0][0] * 20 + 50, pos_xy[1][0] * 20]
 
 
 class Environment():
@@ -25,7 +24,6 @@ class Environment():
         if config['simulation']['headless']:
             p.connect(p.DIRECT)  # Non-graphical version
         else:
-            p.connect(p.SHARED_MEMORY)
             p.connect(p.GUI)
             p.resetDebugVisualizerCamera(cameraDistance=150,
                                          cameraYaw=0,
@@ -129,7 +127,7 @@ class Environment():
         p.stepSimulation()
         # call the state manager
         # encode the state
-        state = 0
+        state = self.state.get_state()
         done = False
         return state, done
 
@@ -140,11 +138,12 @@ class Environment():
         # decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
         #     action)
         # new_state = self.state.get_state()
+
         decoded_actions_uav = action[0:3]
         decoded_actions_ugv = action[3:]
         # Execute the actions
-        self.action_manager.primitive_execution(decoded_actions_uav,
-                                                decoded_actions_ugv, p)
+        done = self.action_manager.primitive_execution(decoded_actions_uav,
+                                                       decoded_actions_ugv, p)
         self.state_manager.update_progress()
         # Get the new encoded state
         new_state = 0  # self.state.get_state()
@@ -152,7 +151,7 @@ class Environment():
         # reward = mission_reward(self.uav, self.ugv, self.config)
         reward = 0
         # Is episode done
-        done = self.check_episode_done()
+        # done = self.check_episode_done()
 
         return new_state, reward, done
 

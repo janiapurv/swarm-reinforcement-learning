@@ -277,6 +277,7 @@ class State(StateManager):
         state.append(
             [self.config['simulation']['total_time'] - self.current_time])
 
+        # Convert everything into a list
         state = functools.reduce(operator.iconcat, state, [])
 
         return state

@@ -75,9 +75,13 @@ primitive:
 red_team:
   sigma: 1
   mue: 0.1
-
 ##---------------------------------------------------------------------##
 # Paths
 map_data_path: 'data/processed/map_data/'
 map_save_path: 'data/processed/map_data/'
 log_path: 'data/log/'
+rrt_data_path: 'data/processed/map_data/rrt'
+##---------------------------------------------------------------------##
+# Paths
+record_video: False
+log_states: False

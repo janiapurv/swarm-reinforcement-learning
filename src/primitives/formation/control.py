@@ -81,7 +81,7 @@ class FormationControl():
         knn = 6
         vmax = vehicles[0].speed
         alpha = 1
-        gamma = 2.5
+        gamma = 1
         min_dis = 2
 
         all_drones_pose = np.zeros((len(vehicles), 2))
@@ -98,8 +98,11 @@ class FormationControl():
             # Normalize the velocity
             if np.linalg.norm(vel) > vmax:
                 vel = (vmax / np.linalg.norm(vel)) * vel
-
             vel_combined.append(vel)
+
+            # # Step size
+            # if np.min(np.abs(path), axis=0) > dt:
+            #     dt = np.min(np.abs(path), axis=0)
 
             # New position
             new_pos = np.zeros(3)
@@ -110,12 +113,12 @@ class FormationControl():
                 new_pos[2] = 8.5
                 vehicle.updated_pos = new_pos
             else:
-                new_pos[2] = 0.6
+                new_pos[2] = 0.5
                 vehicle.updated_pos = new_pos
 
         vel_combined = np.linalg.norm(np.array(vel_combined), axis=1)
 
-        if np.max(vel_combined) < 0.1:
+        if np.max(vel_combined) < 0.075:
             formation_done = True
         else:
             formation_done = False
