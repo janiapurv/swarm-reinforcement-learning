@@ -1,138 +1,183 @@
-"""
-Path Planning Algorithms: RRT
-=============================
-"""
-
-import math
 import numpy as np
+import pandas as pd
 import networkx as nx
+import matplotlib.pyplot as plt
+
+from .sknw import build_sknw
+
+from scipy.spatial import cKDTree
+from scipy import interpolate
+from skimage.morphology import medial_axis, binary_closing
 
 
-class RRT:
+class SkeletonPlanning():
+    """Path planner based on the skeleton of the image.
+    Generates a spline path
     """
-    RRT Path Planner
-    """
-    def __init__(self,
-                 obstacle_map,
-                 k=250,
-                 dt=1,
-                 init=(0, 0, 0),
-                 low=0,
-                 high=100,
-                 dim=3):
+    def __init__(self, grid):
+        self.full_map = grid.astype(int)
+        self.grid = grid.astype(int)
+        self.grid[self.grid == -1] = 1
+        self.skeleton = binary_closing(medial_axis(1 - self.grid))
+        self.sparse_graph = build_sknw(self.skeleton)
+
+        # Get the dense graph
+        self.dense_graph = self.make_dense_graph(self.sparse_graph)
+        return None
+
+    def add_node_edge(self, T, start, stop):
+        """Add node and edges to the tree (graph)
+
+        Parameters
+        ----------
+        T : graph
+            A networkx graph object
+        start : list
+            The start point of the edge.
+        stop : list
+            The end point of the edge.
+
+        Returns
+        -------
+        graph
+            A graph appended with a node and an edge.
         """
-        Generates RRT graph with obstacle avoidance
-
-        Args:
-            k: Number of iterations of branching
-            dt: Time interval for applying control velocity
-            init: Starting point for RRT
-            low: Minimum range in the coordinate system
-            high: Maximum range in the coordinate system
-            dim: 2 for 2D, 3 for 3D
-        """
-
-        self.k = k
-        self.dt = dt
-        self.init = init
-        self.low = low
-        self.high = high
-        self.dim = dim
-        self.map = obstacle_map
-        self.debug_points = []
-        self.rrt = self.generate_rrt(k, dt, init)
-
-    def generate_rrt(self, k, dt, x_init):
-        """
-        Generates RRT graph avoiding obstacles
-
-        Args:
-            k: Number of iterations of branching
-            dt: Time interval for applying control velocity
-            x_init: Starting point for RRT
-
-        Returns:
-            RRT graph
-        """
-
-        T = nx.Graph()
-        T.add_node(x_init)
-
-        for kk in range(self.k):
-            x_new, x_near, u, distance = self.make_new_edge(T)
-            T.add_node(self.np2tup(x_new))
-            T.add_edge(self.np2tup(x_near),
-                       self.np2tup(x_new),
-                       u=u,
-                       weight=distance)
-
+        # Swap so that it aligns with image co-ordinate
+        T.add_node(tuple(start[::-1]), x=start[1], y=start[0])  # swap
+        distance = np.linalg.norm(start[::-1] - stop[::-1])
+        T.add_edge(tuple(start[::-1]), tuple(stop[::-1]), weight=distance)
         return T
 
-    def find_path(self, start, goal):
+    def make_dense_graph(self, graph):
+        """Convert a sparse graph to a dense graph.
+
+        Parameters
+        ----------
+        graph : graph
+            A networkx graph object.
+
+        Returns
+        -------
+        graph
+            A dense graph with added nodes and edges.
         """
-        Finds a path from start to goal avoiding obstacles
+        T = nx.Graph()
+        for (s, e) in graph.edges():
+            ps = graph[s][e]['pts']
+            # Add first node
+            start = graph.nodes()[s]['o']
+            stop = ps[0]
+            # Add the edge nodes
+            T = self.add_node_edge(T, start, stop)
+            for i in range(len(ps) - 1):
+                T = self.add_node_edge(T, ps[i], ps[i + 1])
+            # Add the last node
+            start = ps[-1]
+            stop = graph.nodes()[e]['o']
+            T = self.add_node_edge(T, start, stop)
+        return T
 
-        Args:
-            start: Start pose
-            goal: Goal pose
+    def fit_spline(self, path):
+        """Fit a spline to given points in the path.
 
-        Returns:
-            path: List of poses to visit to reach the goal
+        Parameters
+        ----------
+        path : list
+            A list of points with x and y co-ordinates.
+
+        Returns
+        -------
+        array
+            A array of points on the spline.
         """
+        points = []
+        for node in path:
+            points.append([node[0], node[1]])  # swap
+        points = np.vstack(points)
+        tck, u = interpolate.splprep(points.T)
+        unew = np.linspace(u.min(), u.max(), 250)
+        x_new, y_new = interpolate.splev(unew, tck)
 
-        x_start = self.nearest_neighbor(self.tup2np(start), self.rrt)
-        x_goal = self.nearest_neighbor(self.tup2np(goal), self.rrt)
+        return np.asarray([x_new, y_new]).T
 
-        path = nx.shortest_path(self.rrt, self.np2tup(x_start),
-                                self.np2tup(x_goal))
-        path.insert(0, start)
-        path.append(goal)
+    def get_nearest_node(self, point):
+        """Get the nearest node on the graph for a given point.
+
+        Parameters
+        ----------
+        point : list
+            A list with x and y co-ordinates.
+
+        Returns
+        -------
+        list
+            A list containing the nearest node on the graph.
+        """
+        nodes = pd.DataFrame({
+            'x': nx.get_node_attributes(self.dense_graph, 'x'),
+            'y': nx.get_node_attributes(self.dense_graph, 'y')
+        })
+        node_temp = nodes.copy()
+        tree = cKDTree(data=node_temp[['x', 'y']])
+        points = np.array([point[0], point[1]])
+        _, idx = tree.query(points, k=1, p=1.0)
+        return list(self.dense_graph.nodes())[idx]
+
+    def find_path(self, start, finish, spline=True):
+        """Get the shorted path on the graph from start to finish
+
+        Parameters
+        ----------
+        start : list
+            A list with x and y co-ordinates specifying the start point.
+        finish : list
+            A list with x and y co-ordinates specifying the end point.
+        spline : bool, optional
+            Whether to fit a spline or not, by default True
+
+        Returns
+        -------
+        list
+            A list containing the co-ordinates points on the shortest path.
+        """
+        start_node = self.get_nearest_node(start)
+        finish_node = self.get_nearest_node(finish)
+        path = nx.shortest_path(self.dense_graph, start_node, finish_node)
+        # Add start and end points before fitting spline
+        if spline:
+            # Fit a spline
+            path.insert(0, tuple(start))
+            path.append(tuple(finish))
+            path = self.fit_spline(path)
+        else:
+            points = []
+            for node in path:
+                points.append([node[0], node[1]])
+            points.insert(0, tuple(start))
+            points.append(tuple(finish))
+            path = np.vstack(points)
 
         return path
 
-    def make_new_edge(self, T):
-        x_rand, x_near, u = None, None, None
+    def plot_trajectory(self, start, finish):
+        """Plot the trajectory and the map from start to finish
 
-        while True:
-            x_rand = self.random_state()
-            x_near = self.nearest_neighbor(x_rand, T)
-            u = self.select_input(x_rand, x_near)
-            x_new = self.new_state(x_near, u, self.dt)
+        Parameters
+        ----------
+        start : list
+            An list containing x and y co-ordinates of start point.
+        finish : list
+            An list containing x and y co-ordinate of finish point.
 
-            if not self.map.has_collision(x_new, x_near):
-                break
-
-        return x_new, x_near, u, self.distance(x_near, x_new)
-
-    def np2tup(self, x):
-        return tuple(x)
-
-    def tup2np(self, x):
-        return np.asarray(x, dtype=np.float64)
-
-    def distance(self, x1, x2):
-        return np.linalg.norm(x1 - x2)
-
-    def random_state(self):
-        point = np.random.uniform(self.low, self.high, self.dim)
-        return point
-
-    def nearest_neighbor(self, x_rand, T):
-        min_distance = math.inf
-        result = None
-
-        for x in T.nodes:
-            x = self.tup2np(x)
-            d = self.distance(x, x_rand)
-            if d < min_distance:
-                min_distance = d
-                result = x
-
-        return result.astype(dtype=np.float64)
-
-    def select_input(self, x_rand, x_near):
-        d = x_rand - x_near
-        return d / np.linalg.norm(d)
-
-    def new_state(self, x_near, u, dt):
-        return x_near + u * dt
+        Returns
+        -------
+        None
+        """
+        path = self.find_path(start, finish)
+        plt.scatter(start[0], start[1], s=10, facecolor='r')
+        plt.scatter(finish[0], finish[1], s=10, facecolor='r')
+        for node in path:
+            plt.scatter(node[0], node[1], s=10, facecolor='k')
+        plt.imshow(self.full_map, origin='lower')
+        plt.show()
+        return None

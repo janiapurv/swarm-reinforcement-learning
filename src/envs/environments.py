@@ -16,7 +16,7 @@ from .agents import UAV, UGV
 def get_initial_position(agent):
     grid = np.arange(25).reshape(5, 5)
     pos_xy = np.where(grid == agent)
-    return [pos_xy[0][0] * 20 + 50, pos_xy[1][0] * 20]
+    return [pos_xy[0][0] * 20 + 20, pos_xy[1][0] * 20]
 
 
 class Environment():
@@ -96,15 +96,15 @@ class Environment():
         """
         upAxisIndex = 2
         camDistance = 500
-        pixelWidth = 700
-        pixelHeight = 350
-        camTargetPos = [0, 0, 0]
+        pixelWidth = 350
+        pixelHeight = 700
+        camTargetPos = [0, 80, 0]
 
         far = camDistance
         near = -far
         view_matrix = p.computeViewMatrixFromYawPitchRoll(
             camTargetPos, camDistance, 0, 90, 0, upAxisIndex)
-        projection_matrix = p.computeProjectionMatrix(50, -250, -90, 60, near,
+        projection_matrix = p.computeProjectionMatrix(-90, 60, 150, -150, near,
                                                       far)
         # Get depth values using the OpenGL renderer
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(

@@ -1,15 +1,10 @@
 import math as mt
-import pickle
 import numpy as np
 from scipy import interpolate
 
-import matplotlib.pyplot as plt
-
 from .state_manager import StateManager
 
-from primitives.planning.planners import RRT
-from primitives.planning.maps import GridObstacleMap
-from primitives.planning.plots import Plot2D
+from primitives.planning.planners import SkeletonPlanning
 
 from primitives.formation.control import FormationControl
 from primitives.mrta.task_allocation import MRTA
@@ -213,9 +208,9 @@ class ActionManager(StateManager):
                     done.append(
                         self.ugv_platoon[i].execute_primitive(p_simulation))
 
-            # if all(item for item in done):
-            #     done_rolling_primitive = True
-            #     break
+            if all(item for item in done):
+                done_rolling_primitive = True
+                break
             p_simulation.stepSimulation()
 
             # Video recording and logging
@@ -236,28 +231,7 @@ class PrimitiveManager(StateManager):
               self).__init__(state_manager.uav, state_manager.ugv,
                              state_manager.current_time, state_manager.config)
         self.state_manager = state_manager
-        obstacele_map = GridObstacleMap(grid=state_manager.grid_map)
-        self.planning = RRT(obstacele_map,
-                            k=5000,
-                            dt=5,
-                            init=(185, 65),
-                            low=(0, 0),
-                            high=(350, 700),
-                            dim=2)
-
-        # Save the RRT obstacele_map
-        path = self.config['rrt_data_path'] + '/rrt_object.pkl'
-        with open(path, 'wb') as output:
-            pickle.dump(self.planning, output, pickle.HIGHEST_PROTOCOL)
-
-        start_p = self.convert_pixel_ordinate([0, 0], ispixel=False)
-        end_p = self.convert_pixel_ordinate([40, 200], ispixel=False)
-        path = self.planning.find_path(start_p, end_p)
-        for item in path:
-            plt.scatter(item[0], item[1], s=50)
-        Plot2D().draw_rrt(self.planning.rrt,
-                          draw_nodes=False,
-                          omap=state_manager.grid_map.transpose())
+        self.planning = SkeletonPlanning(self.state_manager.grid_map)
         self.formation = FormationControl()
         return None
 
@@ -327,7 +301,7 @@ class PrimitiveManager(StateManager):
         pixel_start = self.convert_pixel_ordinate(self.start_pos,
                                                   ispixel=False)
         pixel_end = self.convert_pixel_ordinate(self.end_pos, ispixel=False)
-        path = self.planning.find_path(pixel_start, pixel_end)
+        path = self.planning.find_path(pixel_start, pixel_end, spline=False)
 
         # Convert to cartesian co-ordinates
         points = np.zeros((len(path), 2))
@@ -336,7 +310,7 @@ class PrimitiveManager(StateManager):
 
         if points.shape[0] > 3:
             tck, u = interpolate.splprep(points.T)
-            unew = np.linspace(u[0], u[2], 5)
+            unew = np.linspace(u.min(), u.max(), 200)
             x_new, y_new = interpolate.splev(unew, tck)
         else:
             f = interpolate.interp1d(points[:, 0], points[:, 1])
@@ -357,24 +331,13 @@ class PrimitiveManager(StateManager):
             if formation_done:
                 self.count = 1
                 self.new_points = self.get_spline_points()
-                print('yes')
-                for item in self.new_points:
-                    temp = item
-                    pos = [temp[0], temp[1], 2]
-                    a = p.createVisualShape(p.GEOM_SPHERE,
-                                            radius=1,
-                                            rgbaColor=[1, 0, 0, 1],
-                                            visualFramePosition=pos)
-                    p.createMultiBody(0, baseVisualShapeIndex=a)
         else:
             self.centroid_pos = self.get_centroid()
-            self.new_points = self.get_spline_points()
-            current_dist = np.linalg.norm(self.end_pos - self.centroid_pos)
-            end_pos_dist = np.linalg.norm(self.end_pos - self.new_points,
-                                          axis=1)
-            index = np.where(end_pos_dist < 0.95 * current_dist)[0]
-            if len(index) > 0:
+            distance = np.linalg.norm(self.centroid_pos - self.end_pos)
+
+            if len(self.new_points) > 2 and distance > 2:
                 self.next_pos = self.new_points[1]
+                self.new_points = np.delete(self.new_points, 0, 0)
             else:
                 self.next_pos = self.end_pos
             formation_done = self.formation_primitive(p)

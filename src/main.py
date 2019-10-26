@@ -28,12 +28,12 @@ with skip_run('skip', 'plot occupancy grid') as check, check():
     program_starts = time.time()
     fig, ax = plt.subplots()
     for i in range(10000):
-        if i < 1:
+        if i == 10:
             rgbImg, depthImg, segImg = env.get_camera_image()
             plot_occupancy_map(ax,
-                               np.rot90(depthImg),
+                               np.rot90(depthImg, k=2),
                                config,
-                               save_array=False)
+                               save_array=True)
             plt.show()
         p.stepSimulation()
         time.sleep(1 / 250)
@@ -43,22 +43,21 @@ with skip_run('run', 'learning tactic') as check, check():
 
     env = Environment(config)
     # ['n_robots', 'primitive', 'target_node_id', 0, 0, 0]
-    net_output_1 = [[9, 1, 38, 0, 0, 0], [6, 1, 39, 0, 0, 0],
-                    [10, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
-                    [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
+    net_output_1 = [[9, 1, 40, 0, 0, 0], [6, 1, 40, 0, 0, 0],
+                    [10, 1, 40, 0, 0, 0], [12, 1, 40, 0, 0, 0],
+                    [9, 1, 40, 0, 0, 0], [4, 1, 40, 0, 0, 0]]
     start = time.time()
-    for j in range(4):
+    for j in range(1):
         print(j)
         _, _, done = env.step(net_output_1)
         if done:
             break
-
     print(time.time() - start)
 
     net_output_2 = [[10, 2, 38, 0, 0, 0], [0, 2, 39, 0, 0, 0],
                     [15, 2, 40, 0, 0, 0], [13, 2, 15, 0, 0, 0],
                     [12, 2, 12, 0, 0, 0], [0, 2, 11, 0, 0, 0]]
-    for j in range(2):
+    for j in range(1):
         print(j)
         _, _, done = env.step(net_output_2)
         if done:
@@ -69,7 +68,7 @@ with skip_run('run', 'learning tactic') as check, check():
     net_output_3 = [[25, 2, 37, 0, 0, 0], [0, 2, 39, 0, 0, 0],
                     [0, 2, 40, 0, 0, 0], [25, 2, 38, 0, 0, 0],
                     [0, 2, 12, 0, 0, 0], [0, 2, 11, 0, 0, 0]]
-    for j in range(2):
+    for j in range(1):
         print(j)
         _, _, done = env.step(net_output_3)
         if done:
@@ -80,7 +79,7 @@ with skip_run('run', 'learning tactic') as check, check():
     net_output_4 = [[25, 1, 37, 0, 0, 0], [0, 2, 39, 0, 0, 0],
                     [0, 2, 40, 0, 0, 0], [25, 2, 37, 0, 0, 0],
                     [0, 2, 12, 0, 0, 0], [0, 2, 11, 0, 0, 0]]
-    for j in range(2):
+    for j in range(1):
         print(j)
         _, _, done = env.step(net_output_4)
         if done:

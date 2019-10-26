@@ -17,8 +17,8 @@ class StateManager():
         self._initial_target_setup()
 
     def _initial_mission_setup(self):
-        temp = np.load(self.config['map_save_path'] + 'occupancy_map.npy')
-        self.grid_map = temp.transpose()
+        self.grid_map = np.load(self.config['map_save_path'] +
+                                'occupancy_map.npy')
         self.goal = self.config['simulation']['goal_node']
         self.progress_reward = self.config['reward']['progress_reward']
         self.indoor_reward = 2 * self.progress_reward
