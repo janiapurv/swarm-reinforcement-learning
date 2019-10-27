@@ -219,9 +219,8 @@ class ActionManager(StateManager):
                     p_simulation.STATE_LOGGING_VIDEO_MP4,
                     self.config['log_path'] + "tactic.mp4")
             if self.config['log_states']:
-                p_simulation.startStateLogging(
-                    p_simulation.STATE_LOGGING_GENERIC_ROBOT,
-                    self.config['log_path'] + "LOG00048.TXT")
+                print('Need to implement')
+
         return done_rolling_primitive
 
 
@@ -231,7 +230,8 @@ class PrimitiveManager(StateManager):
               self).__init__(state_manager.uav, state_manager.ugv,
                              state_manager.current_time, state_manager.config)
         self.state_manager = state_manager
-        self.planning = SkeletonPlanning(self.state_manager.grid_map)
+        self.planning = SkeletonPlanning(self.state_manager.config,
+                                         self.state_manager.grid_map)
         self.formation = FormationControl()
         return None
 
@@ -351,7 +351,7 @@ class PrimitiveManager(StateManager):
             self.centroid_pos = self.end_pos
             self.next_pos = self.end_pos
 
-        # self.make_vehicles_nonidle()
+        self.make_vehicles_nonidle()
 
         dt = self.config['simulation']['time_step']
         self.vehicles, formation_done = self.formation.execute(
@@ -364,22 +364,3 @@ class PrimitiveManager(StateManager):
             self.make_vehicles_idle()
 
         return formation_done
-
-
-# for item in path:
-#     temp = self.convert_pixel_ordinate(item, ispixel=True)
-#     pos = [temp[0], temp[1], 2]
-#     a = p.createVisualShape(p.GEOM_SPHERE,
-#                             radius=1,
-#                             rgbaColor=[1, 0, 0, 1],
-#                             visualFramePosition=pos)
-#     p.createMultiBody(0, baseVisualShapeIndex=a)
-
-# start_p = self.convert_pixel_ordinate([0, 0], ispixel=False)
-# end_p = self.convert_pixel_ordinate([40, 200], ispixel=False)
-# path = self.planning.find_path(start_p, end_p)
-# for item in path:
-#     plt.scatter(item[0], item[1], s=50)
-# Plot2D().draw_rrt(self.planning.rrt,
-#                   draw_nodes=False,
-#                   omap=state_manager.grid_map.transpose())

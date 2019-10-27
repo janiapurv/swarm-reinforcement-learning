@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -14,15 +16,23 @@ class SkeletonPlanning():
     """Path planner based on the skeleton of the image.
     Generates a spline path
     """
-    def __init__(self, grid):
-        self.full_map = grid.astype(int)
-        self.grid = grid.astype(int)
-        self.grid[self.grid == -1] = 1
-        self.skeleton = binary_closing(medial_axis(1 - self.grid))
-        self.sparse_graph = build_sknw(self.skeleton)
+    def __init__(self, config, grid):
+        # Save the graph if not there
+        file_path = Path(__file__).parents[3] / config[
+            'graph_save_path'] / 'planning_graph.gpickle'
+        if not Path(file_path).exists():
+            self.full_map = grid.astype(int)
+            self.grid = grid.astype(int)
+            self.grid[self.grid == -1] = 1
+            self.skeleton = binary_closing(medial_axis(1 - self.grid))
+            self.sparse_graph = build_sknw(self.skeleton)
 
-        # Get the dense graph
-        self.dense_graph = self.make_dense_graph(self.sparse_graph)
+            # Get the dense graph
+            self.dense_graph = self.make_dense_graph(self.sparse_graph)
+            nx.write_gpickle(self.dense_graph, file_path)
+        else:
+            # Load if it is already there
+            self.dense_graph = nx.read_gpickle(str(file_path))
         return None
 
     def add_node_edge(self, T, start, stop):

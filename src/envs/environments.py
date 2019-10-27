@@ -19,7 +19,7 @@ def get_initial_position(agent):
     return [pos_xy[0][0] * 20 + 20, pos_xy[1][0] * 20]
 
 
-class Environment():
+class Benning():
     def __init__(self, config):
         if config['simulation']['headless']:
             p.connect(p.DIRECT)  # Non-graphical version
@@ -124,9 +124,10 @@ class Environment():
 
         for vehicle in self.uav:
             vehicle.reset()
+
         p.stepSimulation()
+
         # call the state manager
-        # encode the state
         state = self.state.get_state()
         done = False
         return state, done
