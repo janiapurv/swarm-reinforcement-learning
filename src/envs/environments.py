@@ -58,6 +58,7 @@ class Benning():
 
     def _initial_setup(self):
         # Setup ground
+
         plane = p.loadURDF("plane.urdf", [0, 0, 0],
                            p.getQuaternionFromEuler([0, 0, math.pi / 2]),
                            useFixedBase=True,
