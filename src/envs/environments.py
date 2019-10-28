@@ -65,7 +65,11 @@ class Benning():
         texture = p.loadTexture('src/envs/images/mud.png')
         p.changeVisualShape(plane, -1, textureUniqueId=texture)
 
-        path = Path(__file__).parents[0] / 'urdf/environment.urdf'
+        if self.config['simulation']['collision_free']:
+            path = Path(
+                __file__).parents[0] / 'urdf/environment_collision_free.urdf'
+        else:
+            path = Path(__file__).parents[0] / 'urdf/environment.urdf'
         p.loadURDF(str(path), [58.487, 23.655, 0.1],
                    p.getQuaternionFromEuler([0, 0, math.pi / 2]),
                    useFixedBase=True)

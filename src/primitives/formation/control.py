@@ -113,12 +113,12 @@ class FormationControl():
                 new_pos[2] = 8.5
                 vehicle.updated_pos = new_pos
             else:
-                new_pos[2] = 9.5
+                new_pos[2] = 0.5
                 vehicle.updated_pos = new_pos
 
         vel_combined = np.linalg.norm(np.array(vel_combined), axis=1)
 
-        if np.max(vel_combined) < 0.0075 * len(all_drones_pose):
+        if np.max(vel_combined) < 0.006 * len(all_drones_pose):
             formation_done = True
         else:
             formation_done = False

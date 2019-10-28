@@ -310,7 +310,7 @@ class PrimitiveManager(StateManager):
 
         if points.shape[0] > 3:
             tck, u = interpolate.splprep(points.T)
-            unew = np.linspace(u.min(), u.max(), 200)
+            unew = np.linspace(u.min(), u.max(), 300)
             x_new, y_new = interpolate.splev(unew, tck)
         else:
             f = interpolate.interp1d(points[:, 0], points[:, 1])

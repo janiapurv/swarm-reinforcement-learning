@@ -22,6 +22,9 @@ class UGV():
         self.search_speed = config['ugv']['search_speed']
         self.type = 'ugv'
 
+        # Config
+        self.config = config
+
         # Simulation parameters
         self.reward = 0
 
@@ -29,7 +32,11 @@ class UGV():
         self.reset()
 
     def _initial_setup(self):
-        path = Path(__file__).parents[0] / 'urdf/ground_vehicle.urdf'
+        if self.config['simulation']['collision_free']:
+            path = Path(__file__).parents[
+                0] / 'urdf/ground_vehicle_collision_free.urdf'
+        else:
+            path = Path(__file__).parents[0] / 'urdf/ground_vehicle.urdf'
         self.object_id = p.loadURDF(str(path), self.init_pos,
                                     self.init_orientation)
         self.constraint = p.createConstraint(self.object_id, -1, -1, -1,
@@ -103,6 +110,9 @@ class UAV():
         self.search_speed = config['uav']['search_speed']
         self.type = 'uav'
 
+        # Config
+        self.config = config
+
         # Simulation parameters
         self.reward = 0
 
@@ -110,7 +120,11 @@ class UAV():
         self.reset()
 
     def _initial_setup(self):
-        path = Path(__file__).parents[0] / 'urdf/arial_vehicle.urdf'
+        if self.config['simulation']['collision_free']:
+            path = Path(
+                __file__).parents[0] / 'urdf/arial_vehicle_collision_free.urdf'
+        else:
+            path = Path(__file__).parents[0] / 'urdf/arial_vehicle.urdf'
         self.object_id = p.loadURDF(str(path), self.init_pos,
                                     self.init_orientation)
         self.constraint = p.createConstraint(self.object_id, -1, -1, -1,

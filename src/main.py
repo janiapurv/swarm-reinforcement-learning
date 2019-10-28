@@ -47,7 +47,7 @@ with skip_run('run', 'learning tactic') as check, check():
                     [10, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
                     [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
     start = time.time()
-    for j in range(1):
+    for j in range(2):
         print(j)
         _, _, done = env.step(net_output_1)
         if done:
