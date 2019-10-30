@@ -115,7 +115,7 @@ def build_graph(nodes, edges, multi=False):
     for i in range(len(nodes)):
         graph.add_node(i, pts=nodes[i], o=nodes[i].mean(axis=0))
     for s, e, pts in edges:
-        dist = np.linalg.norm(pts[1:] - pts[:-1], axis=1, ord=2)
+        dist = np.linalg.norm(pts[1:] - pts[:-1], axis=1, ord=2).sum()
         graph.add_edge(s, e, pts=pts, weight=dist)
     return graph
 

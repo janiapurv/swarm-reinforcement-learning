@@ -24,7 +24,8 @@ class SkeletonPlanning():
             self.full_map = grid.astype(int)
             self.grid = grid.astype(int)
             self.grid[self.grid == -1] = 1
-            self.skeleton = binary_closing(medial_axis(1 - self.grid))
+            self.skeleton = binary_closing(
+                medial_axis((1 - self.grid).astype(np.uint16)))
             self.sparse_graph = build_sknw(self.skeleton)
 
             # Get the dense graph
@@ -54,8 +55,7 @@ class SkeletonPlanning():
         """
         # Swap so that it aligns with image co-ordinate
         T.add_node(tuple(start[::-1]), x=start[1], y=start[0])  # swap
-        distance = np.linalg.norm(start[::-1] - stop[::-1])
-        T.add_edge(tuple(start[::-1]), tuple(stop[::-1]), weight=distance)
+        T.add_edge(tuple(start[::-1]), tuple(stop[::-1]), weight=1)
         return T
 
     def make_dense_graph(self, graph):
@@ -127,11 +127,10 @@ class SkeletonPlanning():
             'x': nx.get_node_attributes(self.dense_graph, 'x'),
             'y': nx.get_node_attributes(self.dense_graph, 'y')
         })
-        node_temp = nodes.copy()
-        tree = cKDTree(data=node_temp[['x', 'y']])
+        tree = cKDTree(data=nodes[['x', 'y']])
         points = np.array([point[0], point[1]])
-        _, idx = tree.query(points, k=1, p=1.0)
-        return list(self.dense_graph.nodes())[idx]
+        _, idx = tree.query(points, k=1)
+        return tuple(nodes.iloc[idx].values)
 
     def find_path(self, start, finish, spline=True):
         """Get the shorted path on the graph from start to finish
