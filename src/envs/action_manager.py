@@ -310,7 +310,7 @@ class PrimitiveManager(StateManager):
 
         if points.shape[0] > 3:
             tck, u = interpolate.splprep(points.T)
-            unew = np.linspace(u.min(), u.max(), 250)
+            unew = np.linspace(u.min(), u.max(), 200)
             x_new, y_new = interpolate.splev(unew, tck)
         else:
             f = interpolate.interp1d(points[:, 0], points[:, 1])
@@ -331,14 +331,6 @@ class PrimitiveManager(StateManager):
             if formation_done:
                 self.count = 1
                 self.new_points, points = self.get_spline_points()
-                # for temp in self.new_points:
-                #     pos = [temp[0], temp[1], 2]
-                #     a = p.createVisualShape(p.GEOM_SPHERE,
-                #                             radius=1,
-                #                             rgbaColor=[1, 0, 0, 1],
-                #                             visualFramePosition=pos)
-                #     p.createMultiBody(0, baseVisualShapeIndex=a)
-
         else:
             self.centroid_pos = self.get_centroid()
             distance = np.linalg.norm(self.centroid_pos - self.end_pos)

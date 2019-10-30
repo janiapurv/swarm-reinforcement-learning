@@ -43,8 +43,8 @@ with skip_run('run', 'learning tactic') as check, check():
 
     env = Benning(config)
     # ['n_robots', 'primitive', 'target_node_id', 0, 0, 0]
-    net_output_1 = [[9, 1, 38, 0, 0, 0], [6, 1, 39, 0, 0, 0],
-                    [10, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
+    net_output_1 = [[20, 1, 38, 0, 0, 0], [10, 1, 39, 0, 0, 0],
+                    [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
                     [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
     start = time.time()
     for j in range(2):
@@ -54,10 +54,10 @@ with skip_run('run', 'learning tactic') as check, check():
             break
     print(time.time() - start)
 
-    net_output_2 = [[10, 1, 38, 0, 0, 0], [0, 1, 39, 0, 0, 0],
-                    [15, 1, 40, 0, 0, 0], [13, 1, 15, 0, 0, 0],
+    net_output_2 = [[25, 1, 38, 0, 0, 0], [0, 1, 39, 0, 0, 0],
+                    [25, 1, 40, 0, 0, 0], [13, 1, 15, 0, 0, 0],
                     [12, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
-    for j in range(2):
+    for j in range(1):
         print(j)
         _, _, done = env.step(net_output_2)
         if done:
@@ -65,10 +65,10 @@ with skip_run('run', 'learning tactic') as check, check():
 
     print(time.time() - start)
 
-    net_output_3 = [[25, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
+    net_output_3 = [[50, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [0, 1, 40, 0, 0, 0], [25, 1, 38, 0, 0, 0],
                     [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
-    for j in range(2):
+    for j in range(1):
         print(j)
         _, _, done = env.step(net_output_3)
         if done:
@@ -76,10 +76,10 @@ with skip_run('run', 'learning tactic') as check, check():
 
     print(time.time() - start)
 
-    net_output_4 = [[25, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
+    net_output_4 = [[50, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [0, 1, 40, 0, 0, 0], [25, 1, 37, 0, 0, 0],
                     [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
-    for j in range(2):
+    for j in range(1):
         print(j)
         _, _, done = env.step(net_output_4)
         if done:

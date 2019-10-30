@@ -13,10 +13,10 @@ from .rewards import mission_reward
 from .agents import UAV, UGV
 
 
-def get_initial_position(agent):
-    grid = np.arange(25).reshape(5, 5)
+def get_initial_position(agent, n_agents):
+    grid = np.arange(n_agents).reshape(n_agents // 5, 5)
     pos_xy = np.where(grid == agent)
-    return [pos_xy[0][0] * 20 + 20, pos_xy[1][0] * 20]
+    return [pos_xy[0][0] * 20 + 10, pos_xy[1][0] * 20]
 
 
 class Benning():
@@ -78,13 +78,13 @@ class Benning():
         # Initialise the UGV and UAV
         init_orientation = p.getQuaternionFromEuler([math.pi / 2, 0, 0])
         for i, item in enumerate(range(self.n_ugv)):
-            position = get_initial_position(item)
+            position = get_initial_position(item, self.n_ugv)
             init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25, 5]
             self.ugv.append(
                 UGV(init_pos, init_orientation, i, 1 / 10, self.config))
 
         for i, item in enumerate(range(self.n_uav)):
-            position = get_initial_position(item)
+            position = get_initial_position(item, self.n_uav)
             init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25 - 1.5, 5]
             self.uav.append(
                 UAV(init_pos, init_orientation, i, 1 / 10, self.config))
