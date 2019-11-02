@@ -199,18 +199,16 @@ class ActionManager(StateManager):
             # Update all the uav vehicles
             for i in range(self.config['simulation']['n_uav_platoons']):
                 if self.uav_platoon[i].n_vehicles > 0:
-                    done.append(
-                        self.uav_platoon[i].execute_primitive(p_simulation))
+                    done.append(self.uav_platoon[i].execute_primitive())
 
             # Update all the ugv vehicles
             for i in range(self.config['simulation']['n_ugv_platoons']):
                 if self.ugv_platoon[i].n_vehicles > 0:
-                    done.append(
-                        self.ugv_platoon[i].execute_primitive(p_simulation))
+                    done.append(self.ugv_platoon[i].execute_primitive())
 
-            if all(item for item in done):
-                done_rolling_primitive = True
-                break
+            # if all(item for item in done):
+            #     done_rolling_primitive = True
+            #     break
             p_simulation.stepSimulation()
 
             # Video recording and logging
@@ -279,13 +277,6 @@ class PrimitiveManager(StateManager):
         centroid = np.mean(np.asarray(centroid), axis=0)
         return centroid[0:2]  # only x and y
 
-    def execute_primitive(self, p):
-        """Perform primitive execution
-        """
-        primitives = [self.planning_primitive, self.formation_primitive]
-        done = primitives[self.primitive_id - 1](p)
-        return done
-
     def convert_pixel_ordinate(self, point, ispixel):
         if not ispixel:
             converted = [point[0] / 0.42871 + 145, point[1] / 0.42871 + 115]
@@ -297,7 +288,7 @@ class PrimitiveManager(StateManager):
 
     def get_spline_points(self):
         # Perform planning and fit a spline
-        self.start_pos = self.get_centroid()
+        self.start_pos = self.centroid_pos
         pixel_start = self.convert_pixel_ordinate(self.start_pos,
                                                   ispixel=False)
         pixel_end = self.convert_pixel_ordinate(self.end_pos, ispixel=False)
@@ -310,7 +301,7 @@ class PrimitiveManager(StateManager):
 
         if points.shape[0] > 3:
             tck, u = interpolate.splprep(points.T)
-            unew = np.linspace(u.min(), u.max(), 200)
+            unew = np.linspace(u.min(), u.max(), 250)
             x_new, y_new = interpolate.splev(unew, tck)
         else:
             f = interpolate.interp1d(points[:, 0], points[:, 1])
@@ -320,14 +311,21 @@ class PrimitiveManager(StateManager):
         new_points = np.array([x_new, y_new]).T
         return new_points, points
 
-    def planning_primitive(self, p):
+    def execute_primitive(self):
+        """Perform primitive execution
+            """
+        primitives = [self.planning_primitive, self.formation_primitive]
+        done = primitives[self.primitive_id - 1]()
+        return done
+
+    def planning_primitive(self):
         """Performs path planning primitive
         """
         if self.count == 0:
             # First point of formation
             self.centroid_pos = self.get_centroid()
             self.next_pos = self.centroid_pos
-            formation_done = self.formation_primitive(p)
+            formation_done = self.formation_primitive()
             if formation_done:
                 self.count = 1
                 self.new_points, points = self.get_spline_points()
@@ -335,16 +333,16 @@ class PrimitiveManager(StateManager):
             self.centroid_pos = self.get_centroid()
             distance = np.linalg.norm(self.centroid_pos - self.end_pos)
 
-            if len(self.new_points) > 2 and distance > 2:
+            if len(self.new_points) > 2 and distance > 5:
                 self.next_pos = self.new_points[1]
                 self.new_points = np.delete(self.new_points, 0, 0)
             else:
                 self.next_pos = self.end_pos
-            formation_done = self.formation_primitive(p)
+            formation_done = self.formation_primitive()
 
         return formation_done
 
-    def formation_primitive(self, p):
+    def formation_primitive(self):
         """Performs formation primitive
         """
         if self.primitive_id == 2:

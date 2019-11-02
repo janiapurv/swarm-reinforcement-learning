@@ -24,8 +24,7 @@ class SkeletonPlanning():
             self.full_map = grid.astype(int)
             self.grid = grid.astype(int)
             self.grid[self.grid == -1] = 1
-            self.skeleton = binary_closing(
-                medial_axis((1 - self.grid).astype(np.uint16)))
+            self.skeleton = binary_closing(medial_axis(1 - self.grid))
             self.sparse_graph = build_sknw(self.skeleton)
 
             # Get the dense graph
@@ -55,7 +54,8 @@ class SkeletonPlanning():
         """
         # Swap so that it aligns with image co-ordinate
         T.add_node(tuple(start[::-1]), x=start[1], y=start[0])  # swap
-        T.add_edge(tuple(start[::-1]), tuple(stop[::-1]), weight=1)
+        distance = np.linalg.norm(start[::-1] - stop[::-1])
+        T.add_edge(tuple(start[::-1]), tuple(stop[::-1]), weight=distance)
         return T
 
     def make_dense_graph(self, graph):
@@ -105,7 +105,7 @@ class SkeletonPlanning():
             points.append([node[0], node[1]])  # swap
         points = np.vstack(points)
         tck, u = interpolate.splprep(points.T)
-        unew = np.linspace(u.min(), u.max(), 250)
+        unew = np.linspace(u.min(), u.max(), 300)
         x_new, y_new = interpolate.splev(unew, tck)
 
         return np.asarray([x_new, y_new]).T
@@ -127,7 +127,8 @@ class SkeletonPlanning():
             'x': nx.get_node_attributes(self.dense_graph, 'x'),
             'y': nx.get_node_attributes(self.dense_graph, 'y')
         })
-        tree = cKDTree(data=nodes[['x', 'y']])
+        node_temp = nodes.copy()
+        tree = cKDTree(data=node_temp[['x', 'y']])
         points = np.array([point[0], point[1]])
         _, idx = tree.query(points, k=1)
         return tuple(nodes.iloc[idx].values)

@@ -33,8 +33,8 @@ class FormationControl():
 
         # Calculate path velocity
         kl = 1  # constant
-        del_f_g_ij = 2 * (curr_loc - centroid_pos)
-        del_zeta_ij = (kl * max(0, f_g_ij))**3 * del_f_g_ij
+        del_f_g_ij = 1 * (curr_loc - centroid_pos)
+        del_zeta_ij = (kl * max(0, f_g_ij)) * del_f_g_ij
         vel = path_vel - (alpha * del_zeta_ij) - (gamma * P_ij)
 
         if vel_max is not None:
@@ -100,10 +100,6 @@ class FormationControl():
                 vel = (vmax / np.linalg.norm(vel)) * vel
             vel_combined.append(vel)
 
-            # # Step size
-            # if np.min(np.abs(path), axis=0) > dt:
-            #     dt = np.min(np.abs(path), axis=0)
-
             # New position
             new_pos = np.zeros(3)
             new_pos[0:2] = vehicle.current_pos[0:2] + vel * dt
@@ -118,7 +114,7 @@ class FormationControl():
 
         vel_combined = np.linalg.norm(np.array(vel_combined), axis=1)
 
-        if np.max(vel_combined) < 0.0075 * len(all_drones_pose):
+        if np.max(vel_combined) < 0.015 * len(all_drones_pose):
             formation_done = True
         else:
             formation_done = False

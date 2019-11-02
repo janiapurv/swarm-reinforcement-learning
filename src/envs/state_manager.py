@@ -71,8 +71,8 @@ class StateManager():
             info['probability_goals'] = 1 / n_targets
             info['progress_goals'] = 0
             info['probability_goals_indoor'] = 1 / n_targets
-            info['defence_perimeter'] = 0
             info['progress_goals_indoor'] = 0
+            info['defence_perimeter'] = 0
 
             building_info = self.building_info(target)
             info['position'] = building_info['position']

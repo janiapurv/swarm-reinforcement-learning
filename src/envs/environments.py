@@ -9,7 +9,7 @@ from .state_manager import StateManager
 from .states import State
 from .actions import Action
 from .action_manager import ActionManager
-from .rewards import mission_reward
+from .rewards import BenningReward
 from .agents import UAV, UGV
 
 
@@ -46,19 +46,19 @@ class Benning():
         self.uav = []
 
         # Initial setup of the environment
-        self._initial_setup()
+        self._initial_setup(uav=self.uav, ugv=self.ugv)
 
         # Initialize the state and action components
         self.state_manager = StateManager(self.uav, self.ugv,
                                           self.current_time, self.config)
         self.state_manager._initial_mission_setup()
         self.state = State(self.state_manager)
+        self.reward = BenningReward(self.state_manager)
         self.action = Action(self.state_manager)
         self.action_manager = ActionManager(self.state_manager)
 
-    def _initial_setup(self):
+    def _initial_setup(self, uav, ugv):
         # Setup ground
-
         plane = p.loadURDF("plane.urdf", [0, 0, 0],
                            p.getQuaternionFromEuler([0, 0, math.pi / 2]),
                            useFixedBase=True,
@@ -80,14 +80,12 @@ class Benning():
         for i, item in enumerate(range(self.n_ugv)):
             position = get_initial_position(item, self.n_ugv)
             init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25, 5]
-            self.ugv.append(
-                UGV(init_pos, init_orientation, i, 1 / 10, self.config))
+            ugv.append(UGV(init_pos, init_orientation, i, 1 / 10, self.config))
 
         for i, item in enumerate(range(self.n_uav)):
             position = get_initial_position(item, self.n_uav)
             init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25 - 1.5, 5]
-            self.uav.append(
-                UAV(init_pos, init_orientation, i, 1 / 10, self.config))
+            uav.append(UAV(init_pos, init_orientation, i, 1 / 10, self.config))
 
         return None
 
@@ -140,22 +138,20 @@ class Benning():
     def step(self, action):
         """Take a step in the environement
         """
-        # Action decoding
-        # decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
-        #     action)
-        # new_state = self.state.get_state()
-
+        # Action splitting
         decoded_actions_uav = action[0:3]
         decoded_actions_ugv = action[3:]
+
         # Execute the actions
         done = self.action_manager.primitive_execution(decoded_actions_uav,
                                                        decoded_actions_ugv, p)
         self.state_manager.update_progress()
+
         # Get the new encoded state
-        new_state = 0  # self.state.get_state()
-        # # Get reward
-        # reward = mission_reward(self.uav, self.ugv, self.config)
-        reward = 0
+        new_state = self.state.get_state()
+
+        # Get reward
+        reward = self.get_reward()
         # Is episode done
         # done = self.check_episode_done()
 
@@ -183,16 +179,16 @@ class Benning():
             done = True
         return done
 
-    def reward(self):
+    def get_reward(self):
         """Update reward of all the agents
         """
         # Calculate the reward
-        total_reward = mission_reward(self.uav, self.ugv, self.config)
-
-        for vehicle in self.ugv_vehicles:
+        total_reward = self.reward.mission_reward(self.ugv, self.uav,
+                                                  self.config)
+        for vehicle in self.ugv:
             vehicle.reward = total_reward
 
-        for vehicle in self.uav_vehicles:
+        for vehicle in self.uav:
             vehicle.reward = total_reward
 
         return total_reward

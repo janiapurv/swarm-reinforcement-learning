@@ -4,13 +4,13 @@ simulation:
   total_time: 600
   current_time: 0
   time_step: 0.25
-  headless: False
+  headless: True
   collision_free: True
   episodes: 100
   n_buildings: 15
   n_nodes: 53
   n_targets: 3
-  goal_node: 39
+  goal_node: [39]
   target_building_id: [38, 39, 40]
   n_ugv: 25
   n_uav: 75
@@ -24,10 +24,13 @@ uav:
   speed: 10.0
   search_speed: 2.0
   search_dist: 5
+  max_formation_size: 10
 ugv:
-  speed: 5.5
+  speed: 7.0
   search_speed: 1.0
   defense_radius: 3
+  max_formation_size: 10
+  coef_slowness: 1.2
 ##---------------------------------------------------------------------##
 # Weigths parameters
 weights:
