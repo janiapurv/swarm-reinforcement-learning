@@ -212,9 +212,9 @@ class State(StateManager):
                 probability_goals = target_info['probability_goals']
 
                 node_info = self.node_info(j)
-                importance[j, k] += probability_goals * np.linalg.norm(
+                importance[j, k] += probability_goals * 1 / (np.linalg.norm(
                     np.asarray(node_info['position']) -
-                    np.asarray(target_info['position']))
+                    np.asarray(target_info['position'])) + 0.01)
         # Top five pareto nodes
         pareto_nodes = pareto_opt(-1 * importance, n_nodes, n_targets,
                                   n_keep_in_pareto)
