@@ -145,6 +145,7 @@ class Benning():
         # Execute the actions
         done = self.action_manager.primitive_execution(decoded_actions_uav,
                                                        decoded_actions_ugv, p)
+        print(self.action_manager.current_time)
         self.state_manager.update_progress()
 
         # Get the new encoded state

@@ -390,7 +390,4 @@ class State(StateManager):
 
         # Convert everything into a list
         state = list(flatten_state_list(state))
-
-        print(state)
-
         return state

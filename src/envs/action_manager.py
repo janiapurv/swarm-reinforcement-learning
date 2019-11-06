@@ -1,3 +1,5 @@
+import time
+
 import math as mt
 import numpy as np
 from scipy import interpolate
@@ -17,6 +19,8 @@ class ActionManager(StateManager):
                              state_manager.current_time, state_manager.config)
         self.state_manager = state_manager
         self.mrta = MRTA()
+        self.current_time = time.time()
+        self.start_time = time.time()
 
         # Setup the platoons
         self._init_platoons_setup()
@@ -193,8 +197,6 @@ class ActionManager(StateManager):
         # Execute them
         for i in range(500):
             # Update the time
-            self.current_time = self.current_time + self.config['simulation'][
-                'time_step']
             done = []
             # Update all the uav vehicles
             for i in range(self.config['simulation']['n_uav_platoons']):
@@ -219,6 +221,7 @@ class ActionManager(StateManager):
             if self.config['log_states']:
                 print('Need to implement')
 
+        self.current_time = time.time() - self.start_time
         return done_rolling_primitive
 
 

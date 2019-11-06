@@ -52,7 +52,6 @@ with skip_run('run', 'learning tactic') as check, check():
         _, _, done = env.step(net_output_1)
         if done:
             break
-    print(time.time() - start)
 
     net_output_2 = [[25, 1, 38, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [25, 1, 40, 0, 0, 0], [13, 1, 15, 0, 0, 0],
@@ -63,18 +62,14 @@ with skip_run('run', 'learning tactic') as check, check():
         if done:
             break
 
-    print(time.time() - start)
-
     net_output_3 = [[50, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [0, 1, 40, 0, 0, 0], [25, 1, 38, 0, 0, 0],
                     [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
     for j in range(1):
         print(j)
         env.step(net_output_3)
-        # if done:
-        #     break
-
-    print(time.time() - start)
+        if done:
+            break
 
     net_output_4 = [[50, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [0, 1, 40, 0, 0, 0], [25, 1, 37, 0, 0, 0],
@@ -82,7 +77,5 @@ with skip_run('run', 'learning tactic') as check, check():
     for j in range(1):
         print(j)
         env.step(net_output_4)
-        # if done:
-        #     break
-
-    print(time.time() - start)
+        if done:
+            break
