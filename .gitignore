@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 
+# Very large file
 # C extensions
 *.so
 
@@ -87,3 +88,9 @@ target/
 
 # Mypy cache
 .mypy_cache/
+# Very large file
+src/envs/urdf/meshes/benning.obj
+src/envs/images/benning.jpg
+src/envs/urdf/meshes/benning_new.jpg
+src/envs/urdf/meshes/benning_new.obj
+src/envs/urdf/meshes/benning_new.obj.mtl

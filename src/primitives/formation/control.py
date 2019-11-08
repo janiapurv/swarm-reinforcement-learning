@@ -106,10 +106,10 @@ class FormationControl():
 
             # Update position
             if vehicle.type == 'uav':
-                new_pos[2] = 8.5
+                new_pos[2] = 12.0
                 vehicle.updated_pos = new_pos
             else:
-                new_pos[2] = 0.5
+                new_pos[2] = 1.5
                 vehicle.updated_pos = new_pos
 
         vel_combined = np.linalg.norm(np.array(vel_combined), axis=1)

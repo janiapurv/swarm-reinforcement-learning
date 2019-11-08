@@ -59,21 +59,31 @@ class Benning():
 
     def _initial_setup(self, uav, ugv):
         # Setup ground
-        plane = p.loadURDF("plane.urdf", [0, 0, 0],
-                           p.getQuaternionFromEuler([0, 0, math.pi / 2]),
-                           useFixedBase=True,
-                           globalScaling=20)
-        texture = p.loadTexture('src/envs/images/mud.png')
-        p.changeVisualShape(plane, -1, textureUniqueId=texture)
+        p.loadURDF("plane.urdf", [0, 0, 0],
+                   p.getQuaternionFromEuler([0, 0, math.pi / 2]),
+                   useFixedBase=True,
+                   globalScaling=20)
+        p.configureDebugVisualizer(shadowMapWorldSize=20,
+                                   lightPosition=[10, 70, 100])
+        p.configureDebugVisualizer(shadowMapResolution=8192)
 
         if self.config['simulation']['collision_free']:
             path = Path(
                 __file__).parents[0] / 'urdf/environment_collision_free.urdf'
         else:
             path = Path(__file__).parents[0] / 'urdf/environment.urdf'
-        p.loadURDF(str(path), [58.487, 23.655, 0.1],
-                   p.getQuaternionFromEuler([0, 0, math.pi / 2]),
-                   useFixedBase=True)
+        # p.loadURDF(str(path), [58.487, 23.655, 0.1],
+        #            p.getQuaternionFromEuler([0, 0, math.pi / 2]),
+        #            useFixedBase=True)
+        texture = texture = p.loadTexture('src/envs/images/benning.jpg')
+        env = p.loadURDF(str(path), [25, 140, 44],
+                         p.getQuaternionFromEuler([
+                             -0.45 * math.pi / 180, -24.5 * math.pi / 180,
+                             -20.0 * math.pi / 180
+                         ]),
+                         flags=p.URDF_USE_MATERIAL_COLORS_FROM_MTL,
+                         useFixedBase=True)
+        p.changeVisualShape(env, -1, textureUniqueId=texture)
 
         # Initialise the UGV and UAV
         init_orientation = p.getQuaternionFromEuler([math.pi / 2, 0, 0])
