@@ -1,13 +1,10 @@
 import math as mt
-from .state_manager import StateManager
 
 
-class Action(StateManager):
+class Action(object):
     def __init__(self, state_manager):
-        super(Action,
-              self).__init__(state_manager.uav, state_manager.ugv,
-                             state_manager.current_time, state_manager.config)
-        # self.config = config
+        self.state_manager = state_manager
+        self.config = state_manager.config
         return None
 
     def action_decode(self, net_output, type):

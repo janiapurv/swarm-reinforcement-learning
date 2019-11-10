@@ -1,6 +1,5 @@
 import math
 from pathlib import Path
-import numpy as np
 
 import pybullet as p
 import pybullet_data
@@ -10,16 +9,9 @@ from .states import State
 from .actions import Action
 from .action_manager import ActionManager
 from .rewards import BenningReward
-from .agents import UAV, UGV
 
 
-def get_initial_position(agent, n_agents):
-    grid = np.arange(n_agents).reshape(n_agents // 5, 5)
-    pos_xy = np.where(grid == agent)
-    return [pos_xy[0][0] * 20 + 10, pos_xy[1][0] * 20]
-
-
-class Benning():
+class Benning(object):
     def __init__(self, config):
         if config['simulation']['headless']:
             p.connect(p.DIRECT)  # Non-graphical version
@@ -49,9 +41,10 @@ class Benning():
         self._initial_setup(uav=self.uav, ugv=self.ugv)
 
         # Initialize the state and action components
-        self.state_manager = StateManager(self.uav, self.ugv,
-                                          self.current_time, self.config)
-        self.state_manager._initial_mission_setup()
+        self.state_manager = StateManager(self.current_time, self.config)
+        self.state_manager.initial_vehicles_setup()
+        self.state_manager.initial_mission_setup()
+        # Composition of state manager in subsquent operations
         self.state = State(self.state_manager)
         self.reward = BenningReward(self.state_manager)
         self.action = Action(self.state_manager)
@@ -74,18 +67,6 @@ class Benning():
         p.loadURDF(str(path), [58.487, 23.655, 0.1],
                    p.getQuaternionFromEuler([0, 0, math.pi / 2]),
                    useFixedBase=True)
-
-        # Initialise the UGV and UAV
-        init_orientation = p.getQuaternionFromEuler([math.pi / 2, 0, 0])
-        for i, item in enumerate(range(self.n_ugv)):
-            position = get_initial_position(item, self.n_ugv)
-            init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25, 5]
-            ugv.append(UGV(init_pos, init_orientation, i, 1 / 10, self.config))
-
-        for i, item in enumerate(range(self.n_uav)):
-            position = get_initial_position(item, self.n_uav)
-            init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25 - 1.5, 5]
-            uav.append(UAV(init_pos, init_orientation, i, 1 / 10, self.config))
 
         return None
 

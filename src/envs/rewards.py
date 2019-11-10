@@ -1,12 +1,8 @@
 import numpy as np
-from .state_manager import StateManager
 
 
-class BenningReward(StateManager):
+class BenningReward(object):
     def __init__(self, state_manager):
-        super(BenningReward,
-              self).__init__(state_manager.uav, state_manager.ugv,
-                             state_manager.current_time, state_manager.config)
         self.state_manager = state_manager
         self.config = state_manager.config
 
@@ -56,7 +52,7 @@ class BenningReward(StateManager):
             progress, and probability
         """
         # Read from co-ordinate file
-        node_info = self.target_info(goal_id)
+        node_info = self.state_manager.target_info(goal_id)
         info = {}
         info['goal_position'] = node_info['position']
         info['perimeter'] = node_info['perimeter']

@@ -4,10 +4,10 @@ import numpy as np
 import pybullet as p
 
 
-class UGV():
+class UGV(object):
     """The class is the interface to a single robot
     """
-    def __init__(self, init_pos, init_orientation, robot_id, dt, config):
+    def __init__(self, init_pos, init_orientation, robot_id, config):
         # Properties UGV
         self.vehicle_id = robot_id
         self.init_pos = init_pos
@@ -47,8 +47,9 @@ class UGV():
     def reset(self):
         """Moves the robot back to its initial position
         """
-        p.resetBasePositionAndOrientation(self.object_id, self.init_pos,
-                                          self.init_orientation)
+        p.changeConstraint(self.constraint, self.init_pos)
+        self.current_pos = self.init_pos
+        self.updated_pos = self.init_pos
         return None
 
     def get_pos_and_orientation(self):
@@ -86,16 +87,16 @@ class UGV():
         position : array
             The position to which the vehicle should be moved.
         """
-        p.changeConstraint(self.constraint, position)
         pos, _ = self.get_pos_and_orientation()
         self.current_pos = pos
+        p.changeConstraint(self.constraint, position)
         return None
 
 
-class UAV():
+class UAV(object):
     """The class is the interface to a single robot
     """
-    def __init__(self, init_pos, init_orientation, robot_id, dt, config):
+    def __init__(self, init_pos, init_orientation, robot_id, config):
         # Properties UGV
         self.vehicle_id = robot_id
         self.init_pos = init_pos
@@ -135,8 +136,9 @@ class UAV():
     def reset(self):
         """Moves the robot back to its initial position
         """
-        p.resetBasePositionAndOrientation(self.object_id, self.init_pos,
-                                          (0., 0., 0., 1.))
+        p.changeConstraint(self.constraint, self.init_pos)
+        self.current_pos = self.init_pos
+        self.updated_pos = self.init_pos
         return None
 
     def get_pos_and_orientation(self):
@@ -173,7 +175,7 @@ class UAV():
         position : array
             The position to which the vehicle should be moved.
         """
-        p.changeConstraint(self.constraint, position)
         pos, _ = self.get_pos_and_orientation()
         self.current_pos = pos
+        p.changeConstraint(self.constraint, position)
         return None

@@ -1,22 +1,48 @@
+import math
+
+import pybullet as p
+
 import numpy as np
 from numpy import genfromtxt
 
+from .agents import UAV, UGV
 
-class StateManager():
-    def __init__(self, uav, ugv, current_time, config):
-        super(StateManager, self).__init__()
-        # Need to specify some parameters
-        self.uav = uav
-        self.ugv = ugv
+
+class StateManager(object):
+    def __init__(self, current_time, config):
+        # Parameters
+        self.uav = []
+        self.ugv = []
         self.current_time = current_time
         self.config = config
+        self.n_uav = config['simulation']['n_uav']
+        self.n_ugv = config['simulation']['n_ugv']
 
         # Initial setup
         self._initial_nodes_setup()
         self._initial_buildings_setup()
         self._initial_target_setup()
 
-    def _initial_mission_setup(self):
+    # Get initial position
+    def _get_initial_position(self, agent, n_agents):
+        grid = np.arange(n_agents).reshape(n_agents // 5, 5)
+        pos_xy = np.where(grid == agent)
+        return [pos_xy[0][0] * 20 + 10, pos_xy[1][0] * 20]
+
+    def initial_vehicles_setup(self):
+        # Initialise the UGV and UAV
+        init_orientation = p.getQuaternionFromEuler([math.pi / 2, 0, 0])
+        for i, item in enumerate(range(self.n_ugv)):
+            position = self._get_initial_position(item, self.n_ugv)
+            init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25, 5]
+            self.ugv.append(UGV(init_pos, init_orientation, i, self.config))
+
+        for i, item in enumerate(range(self.n_uav)):
+            position = self._get_initial_position(item, self.n_uav)
+            init_pos = [position[0] * 0.25 + 2.5, position[1] * 0.25 - 1.5, 5]
+            self.uav.append(UAV(init_pos, init_orientation, i, self.config))
+
+    def initial_mission_setup(self):
         self.grid_map = np.load(self.config['map_save_path'] +
                                 'occupancy_map.npy')
         self.goal = self.config['simulation']['goal_node']
@@ -270,11 +296,5 @@ class StateManager():
         done = False
         if self.target[1]['probability_goals_outdoor'] == 0:
             done = True
-
-        for vehicle in self.uav:
-            vehicle.current_pos = vehicle.updated_pos
-
-        for vehicle in self.ugv:
-            vehicle.current_pos = vehicle.updated_pos
 
         return done

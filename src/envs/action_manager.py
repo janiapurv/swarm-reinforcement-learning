@@ -4,20 +4,16 @@ import math as mt
 import numpy as np
 from scipy import interpolate
 
-from .state_manager import StateManager
-
 from primitives.planning.planners import SkeletonPlanning
 
 from primitives.formation.control import FormationControl
 from primitives.mrta.task_allocation import MRTA
 
 
-class ActionManager(StateManager):
+class ActionManager(object):
     def __init__(self, state_manager):
-        super(ActionManager,
-              self).__init__(state_manager.uav, state_manager.ugv,
-                             state_manager.current_time, state_manager.config)
         self.state_manager = state_manager
+        self.config = state_manager.config
         self.mrta = MRTA()
         self.current_time = time.time()
         self.start_time = time.time()
@@ -65,7 +61,7 @@ class ActionManager(StateManager):
         # Get the group/target info
         groupInfo = np.zeros((len(decoded_actions), 6))
         for i, actions in enumerate(decoded_actions):
-            info = self.node_info(actions[2])
+            info = self.state_manager.node_info(actions[2])
             groupInfo[i, 0:2] = info['position'][0:2]
             groupInfo[i, 2] = mt.floor(actions[0])
             groupInfo[i, 3] = groupInfo[i, 3] * 0 + 1
@@ -73,8 +69,7 @@ class ActionManager(StateManager):
             groupInfo[i, 5] = groupInfo[i, 5] * 0 + 600
         return robotInfo, groupInfo
 
-    def primitive_parameters(self, decode_actions, vehicles_id, group_center,
-                             type):
+    def primitive_parameters(self, decode_actions, vehicles_id, type):
         info = {}
         info['vehicles_id'] = vehicles_id
         info['primitive_id'] = -1
@@ -86,12 +81,12 @@ class ActionManager(StateManager):
         # ['n_vehicles', 'primitive_id', 'target_id']
         # should implement as a dict
         if decode_actions[1] == 1:
-            target_info = self.node_info(decode_actions[2])
+            target_info = self.state_manager.node_info(decode_actions[2])
             info['end_pos'] = target_info['position']
             info['primitive_id'] = decode_actions[1]
 
         elif decode_actions[1] == 2:
-            target_info = self.node_info(decode_actions[2])
+            target_info = self.state_manager.node_info(decode_actions[2])
             info['end_pos'] = target_info['position']
             if decode_actions[3] == 0:
                 info['formation_type'] = 'solid'
@@ -113,7 +108,7 @@ class ActionManager(StateManager):
         """
         # UAV allocation
         robotInfo, groupInfo = self.get_robot_group_info(
-            self.uav, decoded_actions_uav)
+            self.state_manager.uav, decoded_actions_uav)
 
         # MRTA
         robotInfo, groupCenter = self.mrta.allocateRobots(robotInfo, groupInfo)
@@ -122,12 +117,12 @@ class ActionManager(StateManager):
                 j for j, item in enumerate(robotInfo) if item - 1 == i
             ]
             parameters = self.primitive_parameters(decoded_actions_uav[i],
-                                                   vehicles_id, [0, 0], 'uav')
+                                                   vehicles_id, 'uav')
             self.uav_platoon[i]._init_setup(parameters)
 
         # UGV allocation
         robotInfo, groupInfo = self.get_robot_group_info(
-            self.ugv, decoded_actions_uav)
+            self.state_manager.ugv, decoded_actions_uav)
         # MRTA
         robotInfo, groupCenter = self.mrta.allocateRobots(robotInfo, groupInfo)
         for i in range(self.config['simulation']['n_ugv_platoons']):
@@ -135,7 +130,7 @@ class ActionManager(StateManager):
                 j for j, item in enumerate(robotInfo) if item - 1 == i
             ]
             parameters = self.primitive_parameters(decoded_actions_ugv[i],
-                                                   vehicles_id, [0, 0], 'ugv')
+                                                   vehicles_id, 'ugv')
             self.ugv_platoon[i]._init_setup(parameters)
         return None
 
@@ -155,16 +150,16 @@ class ActionManager(StateManager):
             vehicles_id = list(range(ids, ids + decoded_actions_uav[i][0]))
             ids = ids + decoded_actions_uav[i][0]
             parameters = self.primitive_parameters(decoded_actions_uav[i],
-                                                   vehicles_id, [0, 0], 'uav')
-            self.uav_platoon[i]._init_setup(parameters)
+                                                   vehicles_id, 'uav')
+            self.uav_platoon[i].set_parameters(parameters)
 
         ids = 0
         for i in range(self.config['simulation']['n_ugv_platoons']):
             vehicles_id = list(range(ids, ids + decoded_actions_ugv[i][0]))
             ids = ids + decoded_actions_ugv[i][0]
             parameters = self.primitive_parameters(decoded_actions_ugv[i],
-                                                   vehicles_id, [0, 0], 'ugv')
-            self.ugv_platoon[i]._init_setup(parameters)
+                                                   vehicles_id, 'ugv')
+            self.ugv_platoon[i].set_parameters(parameters)
         return None
 
     def primitive_execution(self,
@@ -208,9 +203,9 @@ class ActionManager(StateManager):
                 if self.ugv_platoon[i].n_vehicles > 0:
                     done.append(self.ugv_platoon[i].execute_primitive())
 
-            # if all(item for item in done):
-            #     done_rolling_primitive = True
-            #     break
+            if all(item for item in done):
+                done_rolling_primitive = True
+                break
             p_simulation.stepSimulation()
 
             # Video recording and logging
@@ -225,20 +220,17 @@ class ActionManager(StateManager):
         return done_rolling_primitive
 
 
-class PrimitiveManager(StateManager):
+class PrimitiveManager(object):
     def __init__(self, state_manager):
-        super(PrimitiveManager,
-              self).__init__(state_manager.uav, state_manager.ugv,
-                             state_manager.current_time, state_manager.config)
+        self.config = state_manager.config
         self.state_manager = state_manager
         self.planning = SkeletonPlanning(self.state_manager.config,
                                          self.state_manager.grid_map)
         self.formation = FormationControl()
         return None
 
-    def _init_setup(self, primitive_info):
-        """Peform initial setup of the primitive
-        class with vehicles and primitive information
+    def set_parameters(self, primitive_info):
+        """Set up the parameters of the premitive execution
 
         Parameters
         ----------
@@ -250,9 +242,13 @@ class PrimitiveManager(StateManager):
         self.vehicles_id = primitive_info['vehicles_id']
 
         if primitive_info['vehicle_type'] == 'uav':
-            self.vehicles = [self.uav[j] for j in self.vehicles_id]
+            self.vehicles = [
+                self.state_manager.uav[j] for j in self.vehicles_id
+            ]
         else:
-            self.vehicles = [self.ugv[j] for j in self.vehicles_id]
+            self.vehicles = [
+                self.state_manager.ugv[j] for j in self.vehicles_id
+            ]
         self.n_vehicles = len(self.vehicles)
 
         # Primitive parameters
@@ -302,9 +298,13 @@ class PrimitiveManager(StateManager):
         for i, point in enumerate(path):
             points[i, :] = self.convert_pixel_ordinate(point, ispixel=True)
 
+        # Depending on the distance select number of points of the path
+        dist = np.linalg.norm(self.start_pos - self.end_pos)
+        n_steps = np.floor(dist / 200 * 250)
+
         if points.shape[0] > 3:
             tck, u = interpolate.splprep(points.T)
-            unew = np.linspace(u.min(), u.max(), 250)
+            unew = np.linspace(u.min(), u.max(), n_steps)
             x_new, y_new = interpolate.splev(unew, tck)
         else:
             f = interpolate.interp1d(points[:, 0], points[:, 1])

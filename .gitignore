@@ -85,5 +85,9 @@ target/
 *.swp
 *.swo
 
+# cad
+*.obj
+*.mtl
+
 # Mypy cache
 .mypy_cache/
