@@ -96,9 +96,10 @@ class StateManager(object):
             info['target_id'] = target
             info['probability_goals'] = 1 / n_targets
             info['progress_goals'] = 0
+            info['probability_goals_outdoor'] = 1 / n_targets
             info['probability_goals_indoor'] = 1 / n_targets
+            info['progress_goals_outdoor'] = 0
             info['progress_goals_indoor'] = 0
-            info['defence_perimeter'] = 0
 
             building_info = self.building_info(target)
             info['position'] = building_info['position']
@@ -161,9 +162,9 @@ class StateManager(object):
                 return target
 
     def check_vehicle(self, vehicle):
-        if (not vehicle.idle) and vehicle.type == 'uav':
+        if vehicle.type == 'uav':
             return 'uav'
-        elif (not vehicle.idle) and vehicle.type == 'ugv':
+        elif vehicle.type == 'ugv':
             return 'ugv'
         else:
             return None
@@ -197,18 +198,20 @@ class StateManager(object):
             progress_goals = 0
             for vehicle in vehicles:
                 if self.check_vehicle(vehicle) == 'uav':
+                    print('Entered')
                     if self.check_closeness(vehicle, target):
+                        print('Entered closeness')
                         progress_goals += self.outdoor_progress(
                             vehicle, target)
             if progress_goals > 1:
                 progress_goals = 1
-            target[
-                'progress_goals'] = target['progress_goals'] + progress_goals
-            if target['progress_goals'] > 1:
-                target['progress_goals'] = 1
+            target['progress_goals_outdoor'] += progress_goals
+            if target['progress_goals_outdoor'] > 1:
+                target['progress_goals_outdoor'] = 1
+                target['progress_goals_indoor'] = 1
 
         sum_progress = 0
-        found_goal = 0
+        found_goal = False
         for j, target in enumerate(self.target):
             if target['target_id'] == self.config['simulation'][
                     'goal_node']:  # found the goal
@@ -224,19 +227,23 @@ class StateManager(object):
                             self.target[i]['probability_goals'] = 0
                             self.target[i]['probability_goals_indoor'] = 0
                             self.target[i]['probability_goals_outdoor'] = 0
-                    found_goal = 1
+                    found_goal = True
                     break
             sum_progress += self.target[j]['progress_goals']
 
-        if found_goal == 0:
+        if not found_goal:
             for target in self.target:
                 target['probability_goals_outdoor'] = (
-                    1 - target['progress_goals']) / (
+                    1 - target['progress_goals_outdoor']) / (
                         len(self.target) - sum_progress
                     )  # 1- progress is probability of each of them
-                target['probability_goals'] = (
-                    target['probability_goals_outdoor'] +
-                    target['probability_goals_indoor']) / 2
+        return found_goal
+
+    def overall_progress(self):
+        for target in self.target:
+            target['probability_goals'] = (
+                target['probability_goals_outdoor'] +
+                target['probability_goals_indoor']) / 2
         return None
 
     def indoor_target_progress_update(self, vehicles):  # noqa
@@ -253,13 +260,13 @@ class StateManager(object):
                                 vehicle, target)
             if progress_goals > 1:
                 progress_goals = 1
-            target[
-                'progress_goals'] = target['progress_goals'] + progress_goals
-            if target['progress_goals'] > 1:
-                target['progress_goals'] = 1
+            target['progress_goals_indoor'] += progress_goals
+            if target['progress_goals_indoor'] > 1:
+                target['progress_goals_indoor'] = 1
+                target['progress_goals_outdoor'] = 1
 
         sum_progress = 0
-        found_goal = 0
+        found_goal = False
         for j, target in enumerate(self.target):
             if target['target_id'] == self.config['simulation'][
                     'goal_node']:  # found the goal
@@ -275,26 +282,39 @@ class StateManager(object):
                             self.target[i]['probability_goals'] = 0
                             self.target[i]['probability_goals_indoor'] = 0
                             self.target[i]['probability_goals_outdoor'] = 0
-                    found_goal = 1
+                    found_goal = True
                     break
             sum_progress += self.target[j]['progress_goals']
 
-        if found_goal == 0:
+        if not found_goal:
             for target in self.target:
-                target['probability_goals_outdoor'] = (
-                    1 - target['progress_goals']) / (
+                target['probability_goals_indoor'] = (
+                    1 - target['progress_goals_indoor']) / (
                         len(self.target) - sum_progress
                     )  # 1- progress is probability of each of them
-
-        return None
+        return found_goal
 
     def update_progress(self):
         """Update all the probability
         """
-        self.indoor_target_progress_update(self.ugv)
-        self.outdoor_target_progress_update(self.uav)
-        done = False
-        if self.target[1]['probability_goals_outdoor'] == 0:
-            done = True
+        found_goal = self.indoor_target_progress_update(self.ugv)
+        _ = self.outdoor_target_progress_update(self.uav)
+        self.overall_progress()
 
-        return done
+        if found_goal:
+            mission_done = 1
+        elif self.current_time >= self.config['simulation']['total_time']:
+            mission_done = 2
+        else:
+            mission_done = 0
+
+        print('HHHHHHHHHHHHH')
+        print(self.current_time)
+        for i in range(3):
+            print(self.target[i]['probability_goals_outdoor'])
+            print(self.target[i]['probability_goals_indoor'])
+            print(self.target[i]['progress_goals_outdoor'])
+            print(self.target[i]['progress_goals_indoor'])
+        print('HHHHHHHHHHHHH')
+
+        return mission_done

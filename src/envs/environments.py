@@ -123,28 +123,23 @@ class Benning(object):
         """Take a step in the environement
         """
         # Action splitting
-        # decoded_actions_uav = action[0:3]
-        # decoded_actions_ugv = action[3:]
+        decoded_actions_uav = action[0:3]
+        decoded_actions_ugv = action[3:]
 
-        # Action splitting
-        decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
-            action)
-        print(decoded_actions_uav)
-
+        # # Action splitting
+        # decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
+        #     action)
         # Execute the actions
-        done = self.action_manager.primitive_execution(decoded_actions_uav,
-                                                       decoded_actions_ugv, p)
+        self.action_manager.primitive_execution(decoded_actions_uav,
+                                                decoded_actions_ugv, p)
         # Display the current time
-        print(self.state_manager.current_time)
         # Update the progress
-        self.state_manager.update_progress()
+        mission_done = self.state_manager.update_progress()
         # Get the new encoded state
         new_state = self.state.get_state()
         # Get reward
         reward = self.get_reward()
-        # Is episode done
-        done = self.check_episode_done()
-        return new_state, reward, done
+        return new_state, reward, mission_done
 
     def simulate_motion(self, path_uav, path_ugv):
         # Update all the vehicles
