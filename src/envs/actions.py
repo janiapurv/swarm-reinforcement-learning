@@ -25,15 +25,14 @@ class Action(object):
         action = []  # We might have to change this code a lot
         action.append(net_output[0])
         # action.append(mt.floor(n_primitive * net_output[1] - 1) + 1)
+        action.append(1)  # By default one
         action.append(mt.floor(n_nodes * net_output[1] - 1) + 1)
-        action.append(mt.floor(n_formations * net_output[2] - 1) + 1)
-        action.append(max_size * net_output[3])
-        action.append(max_size * net_output[4])
-        action.append(n_caution_status * net_output[5])
+        action.append(mt.floor(n_formations * net_output[1] - 1) + 1)
+        action.append(max_size * net_output[1])
+        action.append(max_size * net_output[1])
+        action.append(n_caution_status * net_output[1])
 
-        # print(action)
-
-        return action
+        return action[0:3]
 
     def get_idle_vehicles(self, vehicles):
         """Returns non idle vehicles
@@ -46,6 +45,19 @@ class Action(object):
         vehicles = list(filter(lambda vehicle: vehicle.idle, vehicles))
         return vehicles
 
+    def format_net_output(self, net_output):
+        temp = net_output.tolist()
+        formated_output = {}
+        uav_action, ugv_action = [], []
+        for i in range(self.config['simulation']['n_uav_platoons']):
+            uav_action.append(temp[3 * i:3 * i + 3])
+        formated_output['uav'] = uav_action
+
+        for i in range(self.config['simulation']['n_ugv_platoons']):
+            ugv_action.append(temp[3 * i + 9:3 * i + 18])
+        formated_output['ugv'] = ugv_action
+        return formated_output
+
     def get_action(self, net_output):
         n_uav_platoons = self.config['simulation']['n_uav_platoons']
         n_ugv_platoons = self.config['simulation']['n_ugv_platoons']
@@ -53,23 +65,26 @@ class Action(object):
         # Need to normalise
         decoded_actions_uav, decoded_actions_ugv = [], []
 
+        # Format the net output
+        formated_output = self.format_net_output(net_output)
+
         # NEED TO REIMPLEMENT THE PART OF NORMALISING % OF DRONES NEEDED
         # Decode for uav's actions
         total_probability = 0
         for platoon_id in range(n_uav_platoons):
-            output = net_output[platoon_id]  # net_output is dictionary
+            output = formated_output['uav'][
+                platoon_id]  # net_output is dictionary
             decoded_actions = self.action_decode(output, 'uav')
             decoded_actions_uav.append(decoded_actions)
             total_probability += decoded_actions[0]
 
-        idle_vehicles = self.get_idle_vehicles(self.uav)
+        idle_vehicles = self.get_idle_vehicles(self.state_manager.uav)
         for i, actions in enumerate(decoded_actions_uav):
             if i == 2:
                 decoded_actions_uav[i][0] = len(idle_vehicles) - (
                     decoded_actions_uav[0][0] + decoded_actions_uav[1][0])
             else:
                 n_vehicle = len(idle_vehicles)
-                print(n_vehicle)
                 if i % 2 == 0:
                     decoded_actions_uav[i][0] = mt.floor(
                         actions[0] / total_probability * n_vehicle)
@@ -80,12 +95,13 @@ class Action(object):
         # Decode for ugv's actions
         total_probability = 0
         for platoon_id in range(n_ugv_platoons):
-            output = net_output[platoon_id + 3]  # net_output is dictionary
+            output = formated_output['ugv'][
+                platoon_id]  # net_output is dictionary
             decoded_actions = self.action_decode(output, 'ugv')
             decoded_actions_ugv.append(decoded_actions)
             total_probability += decoded_actions[0]
 
-        idle_vehicles = self.get_idle_vehicles(self.ugv)
+        idle_vehicles = self.get_idle_vehicles(self.state_manager.ugv)
         for i, actions in enumerate(decoded_actions_ugv):
             if i == self.config['simulation']['n_ugv_platoons'] - 1:
                 decoded_actions_ugv[i][0] = len(idle_vehicles) - (

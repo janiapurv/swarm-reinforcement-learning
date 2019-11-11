@@ -1,5 +1,3 @@
-import time
-
 import math as mt
 import numpy as np
 from scipy import interpolate
@@ -15,8 +13,6 @@ class ActionManager(object):
         self.state_manager = state_manager
         self.config = state_manager.config
         self.mrta = MRTA()
-        self.current_time = time.time()
-        self.start_time = time.time()
 
         # Setup the platoons
         self._init_platoons_setup()
@@ -189,8 +185,10 @@ class ActionManager(object):
                                                decoded_actions_ugv)
 
         done_rolling_primitive = False
+        simulation_count = 0
         # Execute them
         for i in range(500):
+            simulation_count += 1
             # Update the time
             done = []
             # Update all the uav vehicles
@@ -216,7 +214,9 @@ class ActionManager(object):
             if self.config['log_states']:
                 print('Need to implement')
 
-        self.current_time = time.time() - self.start_time
+        simulation_time = simulation_count * self.config['simulation'][
+            'time_step']
+        self.state_manager.current_time += simulation_time
         return done_rolling_primitive
 
 
@@ -324,12 +324,16 @@ class PrimitiveManager(object):
     def planning_primitive(self):
         """Performs path planning primitive
         """
+        # Make vehicles non idle
+        self.make_vehicles_nonidle()
+        done_rolling = False
+
         if self.count == 0:
             # First point of formation
             self.centroid_pos = self.get_centroid()
             self.next_pos = self.centroid_pos
-            formation_done = self.formation_primitive()
-            if formation_done:
+            done = self.formation_primitive()
+            if done:
                 self.count = 1
                 self.new_points, points = self.get_spline_points()
         else:
@@ -341,9 +345,13 @@ class PrimitiveManager(object):
                 self.new_points = np.delete(self.new_points, 0, 0)
             else:
                 self.next_pos = self.end_pos
-            formation_done = self.formation_primitive()
+            done_rolling = self.formation_primitive()
 
-        return formation_done
+        # Make vehicles idle
+        if done_rolling:
+            self.make_vehicles_idle()
+
+        return done_rolling
 
     def formation_primitive(self):
         """Performs formation primitive
@@ -355,13 +363,11 @@ class PrimitiveManager(object):
         self.make_vehicles_nonidle()
 
         dt = self.config['simulation']['time_step']
-        self.vehicles, formation_done = self.formation.execute(
-            self.vehicles, self.next_pos, self.centroid_pos, dt,
-            self.formation_type)
+        self.vehicles, done = self.formation.execute(self.vehicles,
+                                                     self.next_pos,
+                                                     self.centroid_pos, dt,
+                                                     self.formation_type)
         for vehicle in self.vehicles:
             vehicle.set_position(vehicle.updated_pos)
 
-        if formation_done:
-            self.make_vehicles_idle()
-
-        return formation_done
+        return done

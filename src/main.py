@@ -3,7 +3,6 @@ import yaml
 from pathlib import Path
 
 import numpy as np
-import pybullet as p
 import matplotlib.pyplot as plt
 
 from envs.environments import Benning
@@ -35,11 +34,10 @@ with skip_run('skip', 'plot occupancy grid') as check, check():
                                config,
                                save_array=True)
             plt.show()
-        p.stepSimulation()
         time.sleep(1 / 250)
     program_ends = time.time()
 
-with skip_run('run', 'learning tactic') as check, check():
+with skip_run('skip', 'hand crafted tactics') as check, check():
 
     env = Benning(config)
     # ['n_robots', 'primitive', 'target_node_id', 0, 0, 0]
@@ -47,9 +45,10 @@ with skip_run('run', 'learning tactic') as check, check():
                     [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
                     [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
     start = time.time()
-    for j in range(1):
+    for j in range(10):
         print(j)
         _, _, done = env.step(net_output_1)
+        env.reset()
         if done:
             break
 
@@ -67,7 +66,7 @@ with skip_run('run', 'learning tactic') as check, check():
                     [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
     for j in range(1):
         print(j)
-        env.step(net_output_3)
+        _, _, done = env.step(net_output_3)
         if done:
             break
 
@@ -76,6 +75,16 @@ with skip_run('run', 'learning tactic') as check, check():
                     [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
     for j in range(1):
         print(j)
-        env.step(net_output_4)
+        _, _, done = env.step(net_output_4)
+        if done:
+            break
+
+with skip_run('run', 'learning tactics') as check, check():
+    env = Benning(config)
+    for j in range(10):
+        rand_input = np.random.rand(18)
+        print(j)
+        _, _, done = env.step(rand_input)
+        # env.reset()
         if done:
             break

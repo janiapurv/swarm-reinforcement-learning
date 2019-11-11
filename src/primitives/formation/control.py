@@ -114,7 +114,7 @@ class FormationControl():
 
         vel_combined = np.linalg.norm(np.array(vel_combined), axis=1)
 
-        if np.mean(vel_combined) < 0.005 * len(all_drones_pose):
+        if np.mean(vel_combined) < 0.0075 * len(all_drones_pose):
             formation_done = True
         else:
             formation_done = False

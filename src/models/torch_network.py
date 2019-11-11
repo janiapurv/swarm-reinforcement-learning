@@ -41,7 +41,8 @@ class Critic(nn.Module):
     def __init__(self, n_states, config):
         super(Critic, self).__init__()
         self.net = nn.Sequential(nn.Linear(n_states, 128), nn.Linear(128, 128),
-                                 nn.Linear(128, 128), nn.Linear(128, 1))
+                                 nn.Linear(128, 128), nn.Linear(128, 128),
+                                 nn.Linear(128, 1))
 
     def forward(self, state):
         value = self.net(state)

@@ -1,3 +1,4 @@
+import time
 import math
 from pathlib import Path
 
@@ -103,13 +104,15 @@ class Benning(object):
         """
         Resets the position of all the robots
         """
-        for vehicle in self.ugv:
+        for vehicle in self.state_manager.uav:
             vehicle.reset()
 
-        for vehicle in self.uav:
+        for vehicle in self.state_manager.ugv:
             vehicle.reset()
 
-        p.stepSimulation()
+        for i in range(200):
+            time.sleep(1 / 240)
+            p.stepSimulation()
 
         # call the state manager
         state = self.state.get_state()
@@ -120,23 +123,27 @@ class Benning(object):
         """Take a step in the environement
         """
         # Action splitting
-        decoded_actions_uav = action[0:3]
-        decoded_actions_ugv = action[3:]
+        # decoded_actions_uav = action[0:3]
+        # decoded_actions_ugv = action[3:]
+
+        # Action splitting
+        decoded_actions_uav, decoded_actions_ugv = self.action.get_action(
+            action)
+        print(decoded_actions_uav)
 
         # Execute the actions
         done = self.action_manager.primitive_execution(decoded_actions_uav,
                                                        decoded_actions_ugv, p)
-        print(self.action_manager.current_time)
+        # Display the current time
+        print(self.state_manager.current_time)
+        # Update the progress
         self.state_manager.update_progress()
-
         # Get the new encoded state
         new_state = self.state.get_state()
-
         # Get reward
         reward = self.get_reward()
         # Is episode done
-        # done = self.check_episode_done()
-
+        done = self.check_episode_done()
         return new_state, reward, done
 
     def simulate_motion(self, path_uav, path_ugv):
@@ -157,7 +164,8 @@ class Benning(object):
 
     def check_episode_done(self):
         done = False
-        if self.current_time >= self.config['simulation']['total_time']:
+        if self.state_manager.current_time >= self.config['simulation'][
+                'total_time']:
             done = True
         return done
 
