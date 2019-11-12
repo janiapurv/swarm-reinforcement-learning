@@ -2,11 +2,13 @@ import numpy as np
 
 import torch
 import torch.optim as optim
+from .utils import visual_log
 
 
 class AdvantageCritic(object):
     def __init__(self, config):
         super(AdvantageCritic, self).__init__()
+        self.config = config
         self.gamma = config['network']['gamma']
         self.n_states = config['network']['n_states']
         self.n_actions = config['network']['n_actions']
@@ -31,13 +33,20 @@ class AdvantageCritic(object):
         return None
 
     def train(self, env, Actor, Critic):
+        # Device to train the model cpu or gpu
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print('Computation device being used:', device)
+
         # Initialise the Actor and Critic networks
-        actor = Actor(self.n_states, self.config)
+        actor = Actor(self.n_states, self.config).to(device)  # use GPU
         actor_optimizer = optim.Adam(actor.parameters(), lr=self.learning_rate)
 
-        critic = Critic(self.n_states, self.config)
+        critic = Critic(self.n_states, self.config).to(device)  # use GPU
         critic_optimizer = optim.Adam(actor.parameters(),
                                       lr=self.learning_rate)
+
+        # Visual logger
+        visual_logger = visual_log('Task type classification')
 
         for episode in range(self.n_episodes):
             state_values = []
@@ -81,5 +90,7 @@ class AdvantageCritic(object):
             # Peform gradient descent on Actor network
             actor_criterion = (-log_actions * advantage).mean()
             self.update_network(actor_optimizer, actor_criterion)
+
+            visual_logger.log(episode, [np.sum(state_rewards)])
 
         return None

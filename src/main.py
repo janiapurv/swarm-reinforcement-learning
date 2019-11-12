@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from envs.environments import Benning
 from envs.utils import get_xy_position
 
-# from models.torch_network import Actor, Critic
-# from models.torch_train import AdvantageCritic
+from models.torch_network import Actor, Critic
+from models.torch_train import AdvantageCritic
 
 from visualization.utils import plot_occupancy_map
 
@@ -94,13 +94,5 @@ with skip_run('skip', 'check learning tactics') as check, check():
 
 with skip_run('skip', 'check learning tactics') as check, check():
     env = Benning(config)
-    net_output_1 = [[20, 1, 38, 0, 0, 0], [10, 1, 39, 0, 0, 0],
-                    [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
-                    [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
-    for j in range(10):
-        rand_input = np.random.rand(18)
-        print(j)
-        _, _, done = env.step(rand_input)
-        # env.reset()
-        if done:
-            break
+    actor_critic = AdvantageCritic(config)
+    actor_critic.train(env, Actor, Critic)

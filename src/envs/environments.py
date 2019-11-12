@@ -133,7 +133,6 @@ class Benning(object):
         new_state = self.state.get_state()
         # Get reward
         reward = self.get_reward()
-        print(reward)
         return new_state, reward, mission_done
 
     def simulate_motion(self, path_uav, path_ugv):
