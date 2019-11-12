@@ -3,7 +3,6 @@ import collections
 import numpy as np
 
 from sklearn.cluster import KMeans
-from .state_manager import StateManager
 
 
 def cluster(vehicles, n_clusters, config):
@@ -190,7 +189,6 @@ def flatten_state_list(l):
 class State(object):
     def __init__(self, state_manager):
         self.state_manager = state_manager
-        self.current_time = state_manager.current_time
         self.config = state_manager.config
         return None
 
@@ -209,7 +207,6 @@ class State(object):
                     self.config['simulation']['target_building_id']):
                 target_info = self.state_manager.target_info(target)
                 probability_goals = target_info['probability_goals']
-
                 node_info = self.state_manager.node_info(j)
                 importance[j, k] += probability_goals * 1 / (np.linalg.norm(
                     np.asarray(node_info['position']) -
@@ -269,7 +266,7 @@ class State(object):
                 info['vehicle_ids'] = 0
                 info['group_type'] = group_type
                 # Add states
-                info['state'] = [0] * 7
+                info['state'] = [0] * 6
                 groups.append(info)
 
         return groups
@@ -339,7 +336,6 @@ class State(object):
         diff = np.asarray(cluseter_pos) - np.asarray(pareto_node_pos)
         dist = np.linalg.norm(diff, axis=1)
         state.append(dist.tolist())
-
         # Append number of vehicle
         n_vehicles = self.n_vehicles(idx, cluster_ids)
         state.append(n_vehicles)
@@ -379,14 +375,14 @@ class State(object):
             state.append(ugv_group[i]['state'])
 
         # Red team information
-        state.append([self.config['red_team']['sigma']])
-        state.append([self.config['red_team']['mue']])  # x,y
+        # state.append([self.config['red_team']['sigma']])
+        # state.append([self.config['red_team']['mue']])  # x,y
 
         # Update the states with time
         remaining_time = self.config['simulation'][
-            'total_time'] - self.current_time
+            'total_time'] - self.state_manager.current_time
         state.append([remaining_time])
 
         # Convert everything into a list
         state = list(flatten_state_list(state))
-        return state
+        return np.asarray(state)

@@ -92,7 +92,7 @@ with skip_run('skip', 'check learning tactics') as check, check():
         if done:
             break
 
-with skip_run('skip', 'check learning tactics') as check, check():
+with skip_run('run', 'check learning tactics') as check, check():
     env = Benning(config)
     actor_critic = AdvantageCritic(config)
     actor_critic.train(env, Actor, Critic)

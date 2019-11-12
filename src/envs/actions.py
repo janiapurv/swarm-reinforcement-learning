@@ -26,7 +26,7 @@ class Action(object):
         action.append(net_output[0])
         # action.append(mt.floor(n_primitive * net_output[1] - 1) + 1)
         action.append(1)  # By default one
-        action.append(mt.floor(n_nodes * net_output[1] - 1) + 1)
+        action.append(mt.floor(n_nodes * net_output[1] - 1))
         action.append(mt.floor(n_formations * net_output[1] - 1) + 1)
         action.append(max_size * net_output[1])
         action.append(max_size * net_output[1])

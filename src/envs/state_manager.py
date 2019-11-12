@@ -144,7 +144,7 @@ class StateManager(object):
             if building['target_id'] == id:
                 return building
 
-    def target_info(self, id):
+    def target_info(self, idx):
         """Get the information about the target.
 
         Parameters
@@ -158,7 +158,7 @@ class StateManager(object):
             A dictionary containing all the information about the target.
         """
         for target in self.target:
-            if target['target_id'] == id:
+            if target['target_id'] == idx:
                 return target
 
     def check_vehicle(self, vehicle):
