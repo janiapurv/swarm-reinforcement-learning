@@ -79,7 +79,7 @@ with skip_run('skip', 'hand crafted tactics') as check, check():
         if done:
             break
 
-with skip_run('run', 'learning tactics') as check, check():
+with skip_run('skip', 'check learning tactics') as check, check():
     env = Benning(config)
     net_output_1 = [[20, 1, 38, 0, 0, 0], [10, 1, 39, 0, 0, 0],
                     [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
@@ -87,7 +87,20 @@ with skip_run('run', 'learning tactics') as check, check():
     for j in range(10):
         rand_input = np.random.rand(18)
         print(j)
-        _, _, done = env.step(net_output_1)
+        _, _, done = env.step(rand_input)
+        # env.reset()
+        if done:
+            break
+
+with skip_run('skip', 'check learning tactics') as check, check():
+    env = Benning(config)
+    net_output_1 = [[20, 1, 38, 0, 0, 0], [10, 1, 39, 0, 0, 0],
+                    [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
+                    [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
+    for j in range(10):
+        rand_input = np.random.rand(18)
+        print(j)
+        _, _, done = env.step(rand_input)
         # env.reset()
         if done:
             break

@@ -198,9 +198,7 @@ class StateManager(object):
             progress_goals = 0
             for vehicle in vehicles:
                 if self.check_vehicle(vehicle) == 'uav':
-                    print('Entered')
                     if self.check_closeness(vehicle, target):
-                        print('Entered closeness')
                         progress_goals += self.outdoor_progress(
                             vehicle, target)
             if progress_goals > 1:
@@ -307,14 +305,5 @@ class StateManager(object):
             mission_done = 2
         else:
             mission_done = 0
-
-        print('HHHHHHHHHHHHH')
-        print(self.current_time)
-        for i in range(3):
-            print(self.target[i]['probability_goals_outdoor'])
-            print(self.target[i]['probability_goals_indoor'])
-            print(self.target[i]['progress_goals_outdoor'])
-            print(self.target[i]['progress_goals_indoor'])
-        print('HHHHHHHHHHHHH')
 
         return mission_done

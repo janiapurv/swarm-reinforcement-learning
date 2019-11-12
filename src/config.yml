@@ -37,10 +37,10 @@ weights:
   w_cluster_battery_pos: 1
   w_cluster_ammo_pos: 1
   w_search: 1
-  w_time_uav: 1 #  reward weight asssociated with time to goal for UAVs
-  w_battery_uav: 1 # weight of battery in reward
-  w_time_ugv: 1 #  reward weight asssociated with time to goal for UGVs
-  w_ammo_ugv: 1 # weight of ammo in reward
+  w_time_uav: 0.05 #  reward weight asssociated with time to goal for UAVs
+  w_battery_uav: 0 # weight of battery in reward
+  w_time_ugv: 0.01 #  reward weight asssociated with time to goal for UGVs
+  w_ammo_ugv: 0 # weight of ammo in reward
 ##---------------------------------------------------------------------##
 # State parameters
 state:

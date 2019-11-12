@@ -21,12 +21,16 @@ class FormationControl():
                                                             )[1], :]
 
         # Calculate the velocity of each neighboor particle
-        k = 1 / len(peers_pos)  # constant
-        g_lij = (min_dis**2) - np.linalg.norm(
-            curr_loc - peers_pos, axis=1, ord=2)
-        del_g_ij = 2 * (peers_pos - curr_loc)
-        temp = np.maximum(0, g_lij / (min_dis**2))**2
-        P_ij = k * np.dot(temp, del_g_ij)
+        if (peers_pos.ndim) == 2:
+            k = 1 / len(peers_pos)  # constant
+            g_lij = (min_dis**2) - np.linalg.norm(
+                curr_loc - peers_pos, axis=1, ord=2)
+            del_g_ij = 2 * (peers_pos - curr_loc)
+            temp = np.maximum(0, g_lij / (min_dis**2))**2
+            P_ij = k * np.dot(temp, del_g_ij)
+        else:
+            # There is no peers
+            P_ij = curr_loc * 0
 
         temp = (curr_loc - centroid_pos) / np.array([a, b])
         f_g_ij = np.linalg.norm(temp, ord=2) - 1
