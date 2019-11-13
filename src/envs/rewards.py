@@ -143,6 +143,6 @@ class BenningReward(object):
         #         # r_search += w_search * info['goal_probability'] * info[
         #         #     'goal_progress'] * (total_time -
         #         #                         inside_search_time) / total_time
-        reward = r_ugv_time + r_ugv_ammo + r_uav_time + r_uav_battery + r_search  # noqa
+        # reward = r_ugv_time + r_ugv_ammo + r_uav_time + r_uav_battery + r_search  # noqa
 
-        return reward
+        return r_search

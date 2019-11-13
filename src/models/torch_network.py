@@ -47,7 +47,8 @@ class Actor(nn.Module):
         self.net = nn.Sequential(nn.Linear(n_states, 128), nn.ReLU(),
                                  nn.Linear(128, 128), nn.ReLU(),
                                  nn.Linear(128, 128), nn.ReLU(),
-                                 nn.Linear(128, n_actions), nn.Sigmoid())
+                                 nn.Linear(128, n_actions), nn.ReLU(),
+                                 nn.Sigmoid())
 
     def forward(self, state):
         action = self.net(state)
@@ -69,9 +70,11 @@ class Critic(nn.Module):
     """
     def __init__(self, n_states, config):
         super(Critic, self).__init__()
-        self.net = nn.Sequential(nn.Linear(n_states, 128), nn.Linear(128, 128),
-                                 nn.Linear(128, 128), nn.Linear(128, 128),
-                                 nn.Linear(128, 1))
+        self.net = nn.Sequential(nn.Linear(n_states, 128), nn.ReLU(),
+                                 nn.Linear(128, 128), nn.ReLU(),
+                                 nn.Linear(128, 128), nn.ReLU(),
+                                 nn.Linear(128, 128), nn.Linear(128, 1),
+                                 nn.ReLU())
 
     def forward(self, state):
         value = self.net(state)

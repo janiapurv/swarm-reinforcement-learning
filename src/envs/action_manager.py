@@ -307,6 +307,8 @@ class PrimitiveManager(object):
             unew = np.linspace(u.min(), u.max(), n_steps)
             x_new, y_new = interpolate.splev(unew, tck)
         else:
+            # Find unique points
+            points = np.array(list(set(tuple(p) for p in points)))
             f = interpolate.interp1d(points[:, 0], points[:, 1])
             x_new = np.linspace(points[0, 0], points[-1, 0], 10)
             y_new = f(x_new)

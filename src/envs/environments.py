@@ -110,6 +110,8 @@ class Benning(object):
             time.sleep(1 / 240)
             p.stepSimulation()
 
+        # reset time
+        self.state_manager.current_time = 0
         # call the state manager
         state = self.state.get_state()
         done = False
