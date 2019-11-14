@@ -75,6 +75,27 @@ class ActionManager(StateManager):
 
     def primitive_parameters(self, decode_actions, vehicles_id, group_center,
                              type):
+        """Generated the parameters used for primitive execution
+
+        Parameters
+        ----------
+        decode_actions : list
+            A list containing decoded actions
+        vehicles_id : list
+            A list containing the vehicle ids on which the primitive is used.
+        group_center : list
+            A list containing the center of the group.
+        type : string
+            The vehicle type i.e., either uav or ugv
+
+        Returns
+        -------
+        dict
+            A dictionary containing the primitives parameters
+            such as start, end position of the path.
+            Formation type, vehicles id.
+
+        """
         info = {}
         info['vehicles_id'] = vehicles_id
         info['primitive_id'] = -1
@@ -264,16 +285,22 @@ class PrimitiveManager(StateManager):
         return None
 
     def make_vehicles_idle(self):
+        """Make vehicles with the instance of primitive idle.
+        """
         for vehicle in self.vehicles:
             vehicle.idle = True
         return None
 
     def make_vehicles_nonidle(self):
+        """Make vehicles with the instance of primitive non-idle.
+        """
         for vehicle in self.vehicles:
             vehicle.idle = False
         return None
 
     def get_centroid(self):
+        """Get the centroid of the vehicles in the group.
+        """
         centroid = []
         for vehicle in self.vehicles:
             centroid.append(vehicle.current_pos)
@@ -281,6 +308,23 @@ class PrimitiveManager(StateManager):
         return centroid[0:2]  # only x and y
 
     def convert_pixel_ordinate(self, point, ispixel):
+        """Convert the input from pixel space to cartesian
+        or from cartesian to pixel space. This is because the path planning
+        happens in pixel space (occupancy grid).
+
+        Parameters
+        ----------
+        point : list
+            The input in pixel/catesian space.
+        ispixel : bool
+            Specify whether the input is pixel or cartesian.
+
+        Returns
+        -------
+        list
+            A list containing converted point to
+            respective (pixel/cartesian) space.
+        """
         if not ispixel:
             converted = [point[0] / 0.42871 + 145, point[1] / 0.42871 + 115]
         else:
@@ -290,6 +334,13 @@ class PrimitiveManager(StateManager):
         return converted
 
     def get_spline_points(self):
+        """Fit a spline or linear function depending on how near the target is.
+
+        Returns
+        -------
+        array
+            An array containing the interpolated points.
+        """
         # Perform planning and fit a spline
         self.start_pos = self.centroid_pos
         pixel_start = self.convert_pixel_ordinate(self.start_pos,
@@ -302,9 +353,14 @@ class PrimitiveManager(StateManager):
         for i, point in enumerate(path):
             points[i, :] = self.convert_pixel_ordinate(point, ispixel=True)
 
+        # Change the number of points according to the distance
+        dist = np.linalg.norm(self.start_pos - self.end_pos)
+        n_points = np.floor(dist / 150 * 250)
+        print(n_points)
+
         if points.shape[0] > 3:
             tck, u = interpolate.splprep(points.T)
-            unew = np.linspace(u.min(), u.max(), 250)
+            unew = np.linspace(u.min(), u.max(), n_points)
             x_new, y_new = interpolate.splev(unew, tck)
         else:
             f = interpolate.interp1d(points[:, 0], points[:, 1])

@@ -33,9 +33,6 @@ class Action(StateManager):
         action.append(max_size * net_output[3])
         action.append(max_size * net_output[4])
         action.append(n_caution_status * net_output[5])
-
-        # print(action)
-
         return action
 
     def get_idle_vehicles(self, vehicles):

@@ -86,9 +86,10 @@ class UGV():
         position : array
             The position to which the vehicle should be moved.
         """
-        p.changeConstraint(self.constraint, position)
         pos, _ = self.get_pos_and_orientation()
         self.current_pos = pos
+        p.changeConstraint(self.constraint, position)
+
         return None
 
 
@@ -173,7 +174,8 @@ class UAV():
         position : array
             The position to which the vehicle should be moved.
         """
-        p.changeConstraint(self.constraint, position)
         pos, _ = self.get_pos_and_orientation()
         self.current_pos = pos
+        p.changeConstraint(self.constraint, position)
+
         return None
