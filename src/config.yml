@@ -3,7 +3,7 @@
 simulation:
   total_time: 50
   current_time: 0
-  time_step: 0.25
+  time_step: 2.5
   headless: False
   collision_free: True
   n_buildings: 15
@@ -20,12 +20,12 @@ simulation:
 ##---------------------------------------------------------------------##
 # UAV and UGV parameters
 uav:
-  speed: 10.0
+  speed: 5.0
   search_speed: 2.0
   search_dist: 20
   max_formation_size: 10
 ugv:
-  speed: 7.0
+  speed: 1.0
   search_speed: 1.0
   defense_radius: 3
   max_formation_size: 10

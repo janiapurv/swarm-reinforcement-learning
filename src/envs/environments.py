@@ -32,7 +32,8 @@ class Benning(object):
         # Parameters for simulation
         p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optional
         p.setGravity(0, 0, -9.81)
-        p.setRealTimeSimulation(1)
+        # p.setTimeStep(config['simulation']['time_step'])
+        # p.setRealTimeSimulation(1)
 
         # Initial setup of the environment
         self._initial_setup()
@@ -106,7 +107,7 @@ class Benning(object):
         for vehicle in self.state_manager.ugv:
             vehicle.reset()
 
-        for i in range(200):
+        for i in range(20):
             time.sleep(1 / 240)
             p.stepSimulation()
 
@@ -129,6 +130,7 @@ class Benning(object):
         # Execute the actions
         self.action_manager.primitive_execution(decoded_act_uav,
                                                 decoded_act_ugv, p)
+        print(self.state_manager.current_time)
         # Update the progress
         mission_done = self.state_manager.update_progress()
         # Get the new encoded state
@@ -136,22 +138,6 @@ class Benning(object):
         # Get reward
         reward = self.get_reward()
         return new_state, reward, mission_done
-
-    def simulate_motion(self, path_uav, path_ugv):
-        # Update all the vehicles
-        for vehicle in self.uav:
-            pos, _ = vehicle.get_pos_and_orientation()
-            pos[0] = pos[0] - 0.001 * path_uav[0]
-            pos[1] = pos[1] - 0.001 * path_uav[1]
-            pos[2] = 5
-            vehicle.set_position(pos)
-
-        for vehicle in self.ugv:
-            pos, _ = vehicle.get_pos_and_orientation()
-            pos[0] = pos[0] - 0.001 * path_ugv[0]
-            vehicle.set_position(pos)
-        p.stepSimulation()
-        return
 
     def check_episode_done(self):
         done = False

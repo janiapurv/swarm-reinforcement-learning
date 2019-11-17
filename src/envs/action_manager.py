@@ -1,6 +1,7 @@
 import math as mt
 import numpy as np
 from scipy import interpolate
+import matplotlib.pyplot as plt
 
 from primitives.planning.planners import SkeletonPlanning
 
@@ -186,25 +187,28 @@ class ActionManager(object):
 
         done_rolling_primitive = False
         simulation_count = 0
+
         # Execute them
         for i in range(500):
             simulation_count += 1
             # Update the time
             done = []
-            # Update all the uav vehicles
-            for i in range(self.config['simulation']['n_uav_platoons']):
-                if self.uav_platoon[i].n_vehicles > 0:
-                    done.append(self.uav_platoon[i].execute_primitive())
 
             # Update all the ugv vehicles
             for i in range(self.config['simulation']['n_ugv_platoons']):
                 if self.ugv_platoon[i].n_vehicles > 0:
-                    done.append(self.ugv_platoon[i].execute_primitive())
+                    done.append(
+                        self.ugv_platoon[i].execute_primitive(p_simulation))
+
+            # Update all the uav vehicles
+            for i in range(self.config['simulation']['n_uav_platoons']):
+                if self.uav_platoon[i].n_vehicles > 0:
+                    done.append(
+                        self.uav_platoon[i].execute_primitive(p_simulation))
 
             if all(item for item in done):
                 done_rolling_primitive = True
                 break
-            p_simulation.stepSimulation()
 
             # Video recording and logging
             if self.config['record_video']:
@@ -282,7 +286,6 @@ class PrimitiveManager(object):
         else:
             converted = [(point[0] - 145) * 0.42871,
                          (point[1] - 115) * 0.42871]
-
         return converted
 
     def get_spline_points(self):
@@ -299,8 +302,8 @@ class PrimitiveManager(object):
             points[i, :] = self.convert_pixel_ordinate(point, ispixel=True)
 
         # Depending on the distance select number of points of the path
-        dist = np.linalg.norm(self.start_pos - self.end_pos)
-        n_steps = np.floor(dist / 200 * 250)
+        segment_length = np.linalg.norm(self.start_pos - self.end_pos)
+        n_steps = np.floor(segment_length / 200 * 250)
 
         if points.shape[0] > 3:
             tck, u = interpolate.splprep(points.T)
@@ -316,11 +319,15 @@ class PrimitiveManager(object):
         new_points = np.array([x_new, y_new]).T
         return new_points, points
 
-    def execute_primitive(self):
+    def execute_primitive(self, p_simulation):
         """Perform primitive execution
             """
         primitives = [self.planning_primitive, self.formation_primitive]
         done = primitives[self.primitive_id - 1]()
+
+        # Step the simulation
+        p_simulation.stepSimulation()
+
         return done
 
     def planning_primitive(self):
@@ -343,7 +350,7 @@ class PrimitiveManager(object):
             distance = np.linalg.norm(self.centroid_pos - self.end_pos)
 
             if len(self.new_points) > 2 and distance > 5:
-                self.next_pos = self.new_points[1]
+                self.next_pos = self.new_points[0]
                 self.new_points = np.delete(self.new_points, 0, 0)
             else:
                 self.next_pos = self.end_pos
@@ -362,8 +369,6 @@ class PrimitiveManager(object):
             self.centroid_pos = self.end_pos
             self.next_pos = self.end_pos
 
-        self.make_vehicles_nonidle()
-
         dt = self.config['simulation']['time_step']
         self.vehicles, done = self.formation.execute(self.vehicles,
                                                      self.next_pos,
@@ -371,5 +376,4 @@ class PrimitiveManager(object):
                                                      self.formation_type)
         for vehicle in self.vehicles:
             vehicle.set_position(vehicle.updated_pos)
-
         return done

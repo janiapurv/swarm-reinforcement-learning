@@ -84,8 +84,8 @@ class FormationControl():
         b = 3
         knn = 6
         vmax = vehicles[0].speed
-        alpha = 1
-        gamma = 1
+        alpha = 0.5
+        gamma = 0.5
         min_dis = 2
 
         all_drones_pose = np.zeros((len(vehicles), 2))

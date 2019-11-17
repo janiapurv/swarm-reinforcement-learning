@@ -42,57 +42,64 @@ with skip_run('skip', 'hand crafted tactics') as check, check():
     env = Benning(config)
     # ['n_robots', 'primitive', 'target_node_id', 0, 0, 0]
     net_output_1 = [[20, 1, 38, 0, 0, 0], [10, 1, 39, 0, 0, 0],
-                    [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
-                    [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
+                    [20, 1, 40, 0, 0, 0], [0, 1, 15, 0, 0, 0],
+                    [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
     start = time.time()
     for j in range(10):
         print(j)
-        _, _, done = env.step(net_output_1)
+        _, _, done = env.step(net_output_1, hand_crafted=True)
         env.reset()
         if done:
             break
+    print(time.time() - start)
 
     net_output_2 = [[25, 1, 38, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [25, 1, 40, 0, 0, 0], [13, 1, 15, 0, 0, 0],
                     [12, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
     for j in range(1):
         print(j)
-        _, _, done = env.step(net_output_2)
+        _, _, done = env.step(net_output_2, hand_crafted=True)
         if done:
             break
+    print(time.time() - start)
 
     net_output_3 = [[50, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [0, 1, 40, 0, 0, 0], [25, 1, 38, 0, 0, 0],
                     [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
     for j in range(1):
         print(j)
-        _, _, done = env.step(net_output_3)
+        _, _, done = env.step(net_output_3, hand_crafted=True)
         if done:
             break
+    print(time.time() - start)
 
     net_output_4 = [[50, 1, 37, 0, 0, 0], [0, 1, 39, 0, 0, 0],
                     [0, 1, 40, 0, 0, 0], [25, 1, 37, 0, 0, 0],
                     [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
     for j in range(1):
         print(j)
-        _, _, done = env.step(net_output_4)
+        _, _, done = env.step(net_output_4, hand_crafted=True)
         if done:
             break
+    print(time.time() - start)
 
 with skip_run('skip', 'check learning tactics') as check, check():
     env = Benning(config)
     net_output_1 = [[20, 1, 38, 0, 0, 0], [10, 1, 39, 0, 0, 0],
                     [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
                     [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
+    start_time = time.time()
     for j in range(10):
         rand_input = np.random.rand(18)
         print(j)
         _, _, done = env.step(rand_input)
+        print(time.time() - start_time)
         # env.reset()
-        if done:
-            break
+        # # env.reset()
+        # if done:
+        #     break
 
-with skip_run('run', 'check learning tactics') as check, check():
+with skip_run('skip', 'check learning tactics') as check, check():
     env = Benning(config)
     actor_critic = AdvantageCritic(config)
     actor_critic.train(env, Actor, Critic)
