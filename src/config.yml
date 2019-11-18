@@ -3,8 +3,8 @@
 simulation:
   total_time: 50
   current_time: 0
-  time_step: 2.5
-  headless: False
+  time_step: 2.0
+  headless: True
   collision_free: True
   n_buildings: 15
   n_nodes: 53

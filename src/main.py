@@ -37,13 +37,13 @@ with skip_run('skip', 'plot occupancy grid') as check, check():
         time.sleep(1 / 250)
     program_ends = time.time()
 
-with skip_run('skip', 'hand crafted tactics') as check, check():
+with skip_run('run', 'hand crafted tactics') as check, check():
 
     env = Benning(config)
     # ['n_robots', 'primitive', 'target_node_id', 0, 0, 0]
     net_output_1 = [[20, 1, 38, 0, 0, 0], [10, 1, 39, 0, 0, 0],
-                    [20, 1, 40, 0, 0, 0], [0, 1, 15, 0, 0, 0],
-                    [0, 1, 12, 0, 0, 0], [0, 1, 11, 0, 0, 0]]
+                    [20, 1, 40, 0, 0, 0], [12, 1, 15, 0, 0, 0],
+                    [9, 1, 12, 0, 0, 0], [4, 1, 11, 0, 0, 0]]
     start = time.time()
     for j in range(10):
         print(j)

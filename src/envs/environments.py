@@ -32,7 +32,7 @@ class Benning(object):
         # Parameters for simulation
         p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optional
         p.setGravity(0, 0, -9.81)
-        # p.setTimeStep(config['simulation']['time_step'])
+        p.setTimeStep(config['simulation']['time_step'])
         # p.setRealTimeSimulation(1)
 
         # Initial setup of the environment
